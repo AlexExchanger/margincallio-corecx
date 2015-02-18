@@ -19,10 +19,11 @@ namespace CoreCX.Trading
         internal decimal OffsetTS { get; set; }
         internal decimal Equity { get; set; }
         internal decimal MarginLevel { get; set; }
-        internal bool MarginCall { get; set; }        
+        internal bool MarginCall { get; set; }
+        internal Order OrdPtr { get; private set; } //указатель на объект заявки присваивается в момент создания объекта позиции
         internal DateTime DtMade { get; private set; }
         
-        internal Position(int user_id, decimal target_debit, decimal current_debit, decimal credit, decimal size, decimal rate, decimal rate_sl, decimal rate_tp, decimal rate_ts, decimal offset_ts) //конструктор позиции
+        internal Position(int user_id, decimal target_debit, decimal current_debit, decimal credit, decimal size, decimal rate, decimal rate_sl, decimal rate_tp, decimal rate_ts, decimal offset_ts, Order ord_ptr) //конструктор позиции
         {
             PositionId = ++next_id; //инкремент id предыдущей позиции
             UserId = user_id;
@@ -38,6 +39,7 @@ namespace CoreCX.Trading
             Equity = 0m;
             MarginLevel = 1m;
             MarginCall = false;
+            OrdPtr = ord_ptr;
             DtMade = DateTime.Now;
         }
     }

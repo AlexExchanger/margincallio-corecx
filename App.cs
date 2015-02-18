@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using CoreCX.Trading;
 
 namespace CoreCX
@@ -11,12 +12,14 @@ namespace CoreCX
 
         static void Main(string[] args)
         {
-            core = new Core();
+            char currency_pair_separator = Convert.ToChar(ConfigurationManager.AppSettings["currency_pair_separator"]);
+
+            core = new Core(currency_pair_separator);
             proc = new Processor();
 
             Console.WriteLine(core.CreateCurrency("doge"));
             Console.WriteLine(core.CreateCurrency("usdr"));
-            Console.WriteLine(core.CreateCurrencyPair("doge_usdr"));
+            Console.WriteLine(core.CreateCurrencyPair("dogeusd_r"));
 
             proc.Start(); //старт исполнения функций из очередей в Main Thread
         }

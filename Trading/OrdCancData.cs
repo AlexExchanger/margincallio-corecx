@@ -5,9 +5,9 @@ namespace CoreCX.Trading
     [Serializable]
     class OrdCancData
     {
-        internal string CurrencyPair { get; set; }
-        internal int OrderType { get; set; }
-        internal bool Side { get; set; }        
+        internal string CurrencyPair { get; private set; }
+        internal int OrderType { get; private set; }
+        internal bool Side { get; private set; }        
 
         internal OrdCancData(string currency_pair, int order_type, bool side)
         {
