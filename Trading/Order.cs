@@ -11,7 +11,6 @@ namespace CoreCX.Trading
         internal decimal OriginalAmount { get; private set; }
         internal decimal ActualAmount { get; set; } //текущий объём заявки может изменяться
         internal decimal Rate { get; private set; }
-        internal Position PosPtr { get; set; } //указатель на объект позиции присваивается после создания объекта заявки
         internal DateTime DtMade { get; private set; }
 
         internal Order() //конструктор заявки по умолчанию
@@ -21,7 +20,6 @@ namespace CoreCX.Trading
             OriginalAmount = 0m;
             ActualAmount = 0m;
             Rate = 0m;
-            PosPtr = null;
             DtMade = new DateTime();
         }
 
@@ -32,7 +30,6 @@ namespace CoreCX.Trading
             OriginalAmount = original_amount;
             ActualAmount = actual_amount;
             Rate = rate;
-            PosPtr = null;
             DtMade = DateTime.Now;
         }
     }

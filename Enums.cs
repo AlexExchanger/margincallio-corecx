@@ -165,6 +165,8 @@ namespace CoreCX
         ErrorCurrencyPairAlreadyExists = 46,
         ErrorCurrencyNotFound = 47,
         ErrorInvalidCurrencyPair = 48,
+        ErrorInvalidCurrency = 49,
+
 
         Unknown = 99
     }

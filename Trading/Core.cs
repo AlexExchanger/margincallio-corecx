@@ -11,16 +11,16 @@ namespace CoreCX.Trading
         #region DATA COLLECTIONS
 
         private Dictionary<int, Account> Accounts; //торговые счета "ID юзера -> торговый счёт"
-        private List<string> Currencies; //список "валюты"
-        private Dictionary<string, OrderBook> OrderBooks; //словарь "валютная пара -> стакан"	
-        private Dictionary<long, OrdCancData> OrderCancellationData; //словарь для закрытия заявок
+        private Dictionary<string, OrderBook> OrderBooks; //словарь "производная валюта -> стакан"	
+        //private Dictionary<long, OrdCancData> OrderCancellationData; //словарь для закрытия заявок
         private Dictionary<string, FixAccount> FixAccounts; //FIX-аккаунты
         private Dictionary<string, ApiKey> ApiKeys; //API-ключи
 
         #endregion
 
-        #region PARAMETERS
+        #region CURRENCY EXCHANGE PARAMETERS
 
+        private string base_currency;
         private char currency_pair_separator;
 
         #endregion
@@ -40,14 +40,14 @@ namespace CoreCX.Trading
 
         #region CORE CONSTRUCTORS
 
-        internal Core(char currency_pair_separator)
+        internal Core(string base_currency, char currency_pair_separator)
         {
             Accounts = new Dictionary<int, Account>(3000);
-            Currencies = new List<string>(10);
             OrderBooks = new Dictionary<string, OrderBook>(10);            
             FixAccounts = new Dictionary<string, FixAccount>(500);
             ApiKeys = new Dictionary<string, ApiKey>(500);
 
+            this.base_currency = base_currency;
             this.currency_pair_separator = currency_pair_separator;
 
             bid_buf = 0m;
@@ -70,19 +70,11 @@ namespace CoreCX.Trading
 
             if (!Accounts.ContainsKey(user_id)) //если счёт ещё не открыт, то открываем
             {
-                Account acc = new Account();
+                Account acc = new Account(); //открываем счёт в базовой валюте
 
-                for (int i = 0; i < Currencies.Count; i++) //добавляем балансы в текущих валютах
+                foreach (string derived_currency in OrderBooks.Keys) //открываем счета в производных валютах
                 {
-                    acc.CFunds.Add(Currencies[i], new Funds());
-                }
-
-                foreach (string currency_pair in OrderBooks.Keys)
-                {
-                    acc.Fees.Add(currency_pair, OrderBooks[currency_pair].DefaultFee); //задаём комиссии по умолчанию
-                    acc.MaxLeverages.Add(currency_pair, OrderBooks[currency_pair].DefaultMaxLeverage); //задаём максимальные плечи по умолчанию
-                    acc.LevelsMC.Add(currency_pair, OrderBooks[currency_pair].DefaultLevelMC); //задаём уровни Margin Call по умолчанию
-                    acc.LevelsFL.Add(currency_pair, OrderBooks[currency_pair].DefaultLevelFL); //задаём уровни Forced Liquidation по умолчанию
+                    acc.DerivedCFunds.Add(derived_currency, new DerivedFunds());
                 }
 
                 Accounts.Add(user_id, acc);
@@ -125,12 +117,14 @@ namespace CoreCX.Trading
             else return StatusCodes.ErrorAccountNotFound;
         }
 
-        internal StatusCodes DeleteAccount(int user_id) //удалить торговый счёт TODO ликвидировать позиции, потом заявки, возвращать массив средств на выход
+        internal StatusCodes DeleteAccount(int user_id) //удалить торговый счёт TODO отменять заявки, возвращать массив средств на выход
         {
             //реплицировать
 
             if (Accounts.ContainsKey(user_id)) //если счёт существует, то удаляем
             {
+                //отменяем заявки
+
                 //удаляем все зависимости
                 foreach (OrderBook book in OrderBooks.Values)
                 {
@@ -138,7 +132,6 @@ namespace CoreCX.Trading
                     book.ActiveSellOrders.RemoveAll(i => i.UserId == user_id);
                     book.ActiveBuyStops.RemoveAll(i => i.UserId == user_id);
                     book.ActiveSellStops.RemoveAll(i => i.UserId == user_id);
-                    //TODO ликвидировать все позиции юзера
                 }
                 
                 //RemoveUserFixAccounts(user_id);
@@ -160,16 +153,23 @@ namespace CoreCX.Trading
             {
                 if (sum > 0) //проверка на положительность суммы пополнения
                 {
-                    if (!Currencies.Contains(currency)) return StatusCodes.ErrorCurrencyNotFound;
-
-                    Funds funds;
-                    if (acc.CFunds.TryGetValue(currency, out funds))
+                    if (currency == base_currency) //пополнение базовой валюты
                     {
-                        funds.AvailableFunds += sum;
+                        acc.BaseCFunds.AvailableFunds += sum;
                         //Pusher.NewBalance(user_id, currency, available_funds, blocked_funds, DateTime.Now); //сообщение о новом балансе
                         return StatusCodes.Success;
                     }
-                    else return StatusCodes.ErrorCurrencyNotFound;
+                    else //пополнение производной валюты
+                    {
+                        DerivedFunds funds;
+                        if (acc.DerivedCFunds.TryGetValue(currency, out funds))
+                        {
+                            funds.AvailableFunds += sum;
+                            //Pusher.NewBalance(user_id, currency, available_funds, blocked_funds, DateTime.Now); //сообщение о новом балансе
+                            return StatusCodes.Success;
+                        }
+                        else return StatusCodes.ErrorCurrencyNotFound;
+                    }                    
                 }
                 else return StatusCodes.ErrorNegativeOrZeroSum;
             }
@@ -187,20 +187,31 @@ namespace CoreCX.Trading
 
                 if (sum > 0) //проверка на положительность суммы вывода
                 {
-                    if (!Currencies.Contains(currency)) return StatusCodes.ErrorCurrencyNotFound;
-
-                    Funds funds;
-                    if (acc.CFunds.TryGetValue(currency, out funds))
+                    if (currency == base_currency) //снятие базовой валюты
                     {
-                        if (funds.AvailableFunds >= sum)
+                        if (acc.BaseCFunds.AvailableFunds >= sum)
                         {
-                            funds.AvailableFunds -= sum;
+                            acc.BaseCFunds.AvailableFunds -= sum;
                             //Pusher.NewBalance(user_id, currency, available_funds, blocked_funds, DateTime.Now); //сообщение о новом балансе
                             return StatusCodes.Success;
                         }
-                        else return StatusCodes.ErrorInsufficientFunds;
+                        else return StatusCodes.ErrorInsufficientFunds;                        
                     }
-                    else return StatusCodes.ErrorCurrencyNotFound;
+                    else //снятие производной валюты
+                    {
+                        DerivedFunds funds;
+                        if (acc.DerivedCFunds.TryGetValue(currency, out funds))
+                        {
+                            if (funds.AvailableFunds >= sum)
+                            {
+                                funds.AvailableFunds -= sum;
+                                //Pusher.NewBalance(user_id, currency, available_funds, blocked_funds, DateTime.Now); //сообщение о новом балансе
+                                return StatusCodes.Success;
+                            }
+                            else return StatusCodes.ErrorInsufficientFunds;
+                        }
+                        else return StatusCodes.ErrorCurrencyNotFound;
+                    }
                 }
                 else return StatusCodes.ErrorNegativeOrZeroSum;
             }
@@ -208,83 +219,49 @@ namespace CoreCX.Trading
         }
 
 
+
+
         #endregion
 
         #region GLOBAL FUNCTIONS
 
-        internal StatusCodes CreateCurrency(string currency)
+        internal StatusCodes CreateCurrencyPair(string derived_currency)
         {
-            bool _created = false;
-
-            //добавляем валюту в список "валюты", если валюта ещё не добавлена
-            if (!Currencies.Contains(currency))
+            //проверка символа производной валюты на пустоту
+            if (!String.IsNullOrEmpty(derived_currency))
             {
-                Currencies.Add(currency);
-                _created = true;
-            }
-
-            foreach (KeyValuePair<int, Account> acc in Accounts)
-            {
-                //добавляем валюту к аккаунту юзера, если валюта ещё не добавлена
-                if (!acc.Value.CFunds.ContainsKey(currency))
-                {
-                    acc.Value.CFunds.Add(currency, new Funds());
-                    _created = true;
-                }
-            }
-
-            if (_created) return StatusCodes.Success;
-            else return StatusCodes.ErrorCurrencyAlreadyExists;
-        }
-
-        internal StatusCodes GetCurrencies(out List<string> currencies)
-        {
-            currencies = new List<string>(Currencies);
-            return StatusCodes.Success;
-        }
-
-        internal StatusCodes DeleteCurrency() // TODO IN MARCH
-        {
-            return StatusCodes.Success;
-        }
-
-        internal StatusCodes CreateCurrencyPair(string currency_pair)
-        {
-            //получаем валюты, входящие в пару
-            string[] currencies = SplitCurrencyPair(currency_pair);
-            if (currencies.Length != 2) return StatusCodes.ErrorInvalidCurrencyPair;
-            if (String.IsNullOrEmpty(currencies[0]) || String.IsNullOrEmpty(currencies[1])) return StatusCodes.ErrorInvalidCurrencyPair;
-            
-            //проверяем, созданы ли валюты, входящие в пару
-            if (!Currencies.Contains(currencies[0]) || !Currencies.Contains(currencies[1])) return StatusCodes.ErrorCurrencyNotFound;
-            foreach (KeyValuePair<int, Account> acc in Accounts)
-            {
-                if (!acc.Value.CFunds.ContainsKey(currencies[0]) || !acc.Value.CFunds.ContainsKey(currencies[1])) return StatusCodes.ErrorCurrencyNotFound;
-            }
-
-            //создаём новый стакан для валютной пары, если ещё не создан
-            if (!OrderBooks.ContainsKey(currency_pair))
-            {
-                OrderBook book = new OrderBook();
-                OrderBooks.Add(currency_pair, book);
-
+                //открываем клиентские счета в производной валюте
                 foreach (KeyValuePair<int, Account> acc in Accounts)
                 {
-                    //добавляем настройки валютной пары к аккаунту юзера
-                    if (!acc.Value.Fees.ContainsKey(currency_pair)) acc.Value.Fees.Add(currency_pair, book.DefaultFee);
-                    if (!acc.Value.MaxLeverages.ContainsKey(currency_pair)) acc.Value.MaxLeverages.Add(currency_pair, book.DefaultMaxLeverage);
-                    if (!acc.Value.LevelsMC.ContainsKey(currency_pair)) acc.Value.LevelsMC.Add(currency_pair, book.DefaultLevelMC);
-                    if (!acc.Value.LevelsFL.ContainsKey(currency_pair)) acc.Value.LevelsFL.Add(currency_pair, book.DefaultLevelFL);
+                    if (!acc.Value.DerivedCFunds.ContainsKey(derived_currency)) acc.Value.DerivedCFunds.Add(derived_currency, new DerivedFunds());
                 }
-                
-                return StatusCodes.Success;
+
+                //создаём стакан для данной производной валюты
+                if (!OrderBooks.ContainsKey(derived_currency))
+                {
+                    OrderBooks.Add(derived_currency, new OrderBook());
+                    return StatusCodes.Success;
+                }
+                else return StatusCodes.ErrorCurrencyPairAlreadyExists;
             }
-            else return StatusCodes.ErrorCurrencyPairAlreadyExists;
+            else return StatusCodes.ErrorInvalidCurrency;
         }
 
         internal StatusCodes GetCurrencyPairs(out List<string> currency_pairs)
         {
-            currency_pairs = new List<string>(OrderBooks.Keys);
+            currency_pairs = new List<string>(10);
+
+            foreach (string derived_currency in OrderBooks.Keys) //формируем текущие валютные пары
+            {
+                currency_pairs.Add(derived_currency + currency_pair_separator + base_currency);
+            }
+            
+            return StatusCodes.Success;
+        }
+
+        internal StatusCodes GetDerivedCurrencies(out List<string> derived_currencies)
+        {
+            derived_currencies = new List<string>(OrderBooks.Keys);
             return StatusCodes.Success;
         }
 
@@ -292,7 +269,7 @@ namespace CoreCX.Trading
         {
             return StatusCodes.Success;
         }
-
+        
         #endregion
 
         #endregion
@@ -301,8 +278,7 @@ namespace CoreCX.Trading
 
         #region MATCHING
 
-        //ПРИНИМАЕТ НА ВХОД ГАРАНТИРОВАННО ВЕРНЫЕ ПАРАМЕТРЫ
-        private void Match(OrderBook book, string currency_pair, string[] currencies) //выполняет метчинг текущих активных заявок в заданном стакане
+        private void Match(string derived_currency, OrderBook book) //выполняет метчинг текущих активных заявок в заданном стакане
         {
             //проверка коллекций на пустоту
             if (Accounts.Count == 0 || book.ActiveBuyOrders.Count == 0 || book.ActiveSellOrders.Count == 0)
@@ -321,12 +297,10 @@ namespace CoreCX.Trading
                 Order sell_ord = book.ActiveSellOrders[book.ActiveSellOrders.Count - 1];
                 Account buyer = Accounts[buy_ord.UserId];
                 Account seller = Accounts[sell_ord.UserId];
-                Funds buyer_funds1 = buyer.CFunds[currencies[0]];
-                Funds buyer_funds2 = buyer.CFunds[currencies[1]];
-                Funds seller_funds1 = seller.CFunds[currencies[0]];
-                Funds seller_funds2 = seller.CFunds[currencies[1]];
-                decimal buyer_fee = buyer.Fees[currency_pair];
-                decimal seller_fee = seller.Fees[currency_pair];
+                DerivedFunds derived_buyer_funds = buyer.DerivedCFunds[derived_currency];
+                BaseFunds base_buyer_funds = buyer.BaseCFunds;
+                DerivedFunds derived_seller_funds = seller.DerivedCFunds[derived_currency];
+                BaseFunds base_seller_funds = seller.BaseCFunds;
                 
                 //поиск наиболее ранней заявки для определения initiator_kind, trade_rate (и комиссий)
                 bool initiator_kind;
@@ -348,18 +322,18 @@ namespace CoreCX.Trading
                 if (buy_ord.ActualAmount > sell_ord.ActualAmount) //1-ый вариант - объём buy-заявки больше
                 {
                     //добавляем объект Trade в коллекцию
-                    Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, initiator_kind, sell_ord.ActualAmount, trade_rate, sell_ord.ActualAmount * buyer_fee, sell_ord.ActualAmount * trade_rate * seller_fee);
+                    Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, initiator_kind, sell_ord.ActualAmount, trade_rate, sell_ord.ActualAmount * derived_buyer_funds.Fee, sell_ord.ActualAmount * trade_rate * derived_seller_funds.Fee);
                     //Pusher.NewTrade(trade); //сообщение о новой сделке
 
                     //начисляем продавцу сумму минус комиссия
-                    seller_funds1.BlockedFunds -= sell_ord.ActualAmount;
-                    seller_funds2.AvailableFunds += sell_ord.ActualAmount * trade_rate * (1m - seller_fee);
+                    derived_seller_funds.BlockedFunds -= sell_ord.ActualAmount;
+                    base_seller_funds.AvailableFunds += sell_ord.ActualAmount * trade_rate * (1m - derived_seller_funds.Fee);
                     //Pusher.NewBalance(sell_ord.UserId, seller, DateTime.Now); //сообщение о новом балансе
 
                     //начисляем покупателю сумму минус комиссия плюс разницу
-                    buyer_funds2.BlockedFunds -= sell_ord.ActualAmount * buy_ord.Rate;
-                    buyer_funds1.AvailableFunds += sell_ord.ActualAmount * (1m - buyer_fee);
-                    buyer_funds2.AvailableFunds += sell_ord.ActualAmount * (buy_ord.Rate - trade_rate);
+                    base_buyer_funds.BlockedFunds -= sell_ord.ActualAmount * buy_ord.Rate;
+                    derived_buyer_funds.AvailableFunds += sell_ord.ActualAmount * (1m - derived_buyer_funds.Fee);
+                    base_buyer_funds.AvailableFunds += sell_ord.ActualAmount * (buy_ord.Rate - trade_rate);
                     //Pusher.NewBalance(buy_ord.UserId, buyer, DateTime.Now); //сообщение о новом балансе
 
                     //buy-заявка становится partially filled => уменьшается её ActualAmount
@@ -383,18 +357,18 @@ namespace CoreCX.Trading
                 else if (buy_ord.ActualAmount < sell_ord.ActualAmount) //2-ой вариант - объём sell-заявки больше
                 {
                     //добавляем объект Trade в коллекцию
-                    Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, initiator_kind, buy_ord.ActualAmount, trade_rate, buy_ord.ActualAmount * buyer_fee, buy_ord.ActualAmount * trade_rate * seller_fee);
+                    Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, initiator_kind, buy_ord.ActualAmount, trade_rate, buy_ord.ActualAmount * derived_buyer_funds.Fee, buy_ord.ActualAmount * trade_rate * derived_seller_funds.Fee);
                     //Pusher.NewTrade(trade); //сообщение о новой сделке
 
                     //начисляем продавцу сумму минус комиссия
-                    seller_funds1.BlockedFunds -= buy_ord.ActualAmount;
-                    seller_funds2.AvailableFunds += buy_ord.ActualAmount * trade_rate * (1m - seller_fee);
+                    derived_seller_funds.BlockedFunds -= buy_ord.ActualAmount;
+                    base_seller_funds.AvailableFunds += buy_ord.ActualAmount * trade_rate * (1m - derived_seller_funds.Fee);
                     //Pusher.NewBalance(sell_ord.UserId, seller, DateTime.Now); //сообщение о новом балансе
 
                     //начисляем покупателю сумму минус комиссия плюс разницу
-                    buyer_funds2.BlockedFunds -= buy_ord.ActualAmount * buy_ord.Rate;
-                    buyer_funds1.AvailableFunds += buy_ord.ActualAmount * (1m - buyer_fee);
-                    buyer_funds2.AvailableFunds += buy_ord.ActualAmount * (buy_ord.Rate - trade_rate);
+                    base_buyer_funds.BlockedFunds -= buy_ord.ActualAmount * buy_ord.Rate;
+                    derived_buyer_funds.AvailableFunds += buy_ord.ActualAmount * (1m - derived_buyer_funds.Fee);
+                    base_buyer_funds.AvailableFunds += buy_ord.ActualAmount * (buy_ord.Rate - trade_rate);
                     //Pusher.NewBalance(buy_ord.UserId, buyer, DateTime.Now); //сообщение о новом балансе
 
                     //sell-заявка становится partially filled => уменьшается её ActualAmount
@@ -418,18 +392,18 @@ namespace CoreCX.Trading
                 else if (buy_ord.ActualAmount == sell_ord.ActualAmount) //3-ий вариант - объёмы заявок равны
                 {
                     //добавляем объект Trade в коллекцию
-                    Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, initiator_kind, buy_ord.ActualAmount, trade_rate, sell_ord.ActualAmount * buyer_fee, sell_ord.ActualAmount * trade_rate * seller_fee);
+                    Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, initiator_kind, buy_ord.ActualAmount, trade_rate, sell_ord.ActualAmount * derived_buyer_funds.Fee, sell_ord.ActualAmount * trade_rate * derived_seller_funds.Fee);
                     //Pusher.NewTrade(trade); //сообщение о новой сделке
 
                     //начисляем продавцу сумму минус комиссия
-                    seller_funds1.BlockedFunds -= buy_ord.ActualAmount;
-                    seller_funds2.AvailableFunds += buy_ord.ActualAmount * trade_rate * (1m - seller_fee);
+                    derived_seller_funds.BlockedFunds -= buy_ord.ActualAmount;
+                    base_seller_funds.AvailableFunds += buy_ord.ActualAmount * trade_rate * (1m - derived_seller_funds.Fee);
                     //Pusher.NewBalance(sell_ord.UserId, seller, DateTime.Now); //сообщение о новом балансе
 
                     //начисляем покупателю сумму минус комиссия плюс разницу
-                    buyer_funds2.BlockedFunds -= buy_ord.ActualAmount * buy_ord.Rate;
-                    buyer_funds1.AvailableFunds += buy_ord.ActualAmount * (1m - buyer_fee);
-                    buyer_funds2.AvailableFunds += buy_ord.ActualAmount * (buy_ord.Rate - trade_rate);
+                    base_buyer_funds.BlockedFunds -= buy_ord.ActualAmount * buy_ord.Rate;
+                    derived_buyer_funds.AvailableFunds += buy_ord.ActualAmount * (1m - derived_buyer_funds.Fee);
+                    base_buyer_funds.AvailableFunds += buy_ord.ActualAmount * (buy_ord.Rate - trade_rate);
                     //Pusher.NewBalance(buy_ord.UserId, buyer, DateTime.Now); //сообщение о новом балансе
 
                     //buy-заявка становится filled => её ActualAmount становится нулевым

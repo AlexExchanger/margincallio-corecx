@@ -12,14 +12,10 @@ namespace CoreCX
 
         static void Main(string[] args)
         {
-            char currency_pair_separator = Convert.ToChar(ConfigurationManager.AppSettings["currency_pair_separator"]);
-
-            core = new Core(currency_pair_separator);
+            core = new Core(ConfigurationManager.AppSettings["base_currency"], ConfigurationManager.AppSettings["currency_pair_separator"][0]);
             proc = new Processor();
 
-            Console.WriteLine(core.CreateCurrency("doge"));
-            Console.WriteLine(core.CreateCurrency("usdr"));
-            Console.WriteLine(core.CreateCurrencyPair("dogeusd_r"));
+            Console.WriteLine(core.CreateCurrencyPair("btc"));
 
             proc.Start(); //старт исполнения функций из очередей в Main Thread
         }
