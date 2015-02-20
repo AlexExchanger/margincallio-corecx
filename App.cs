@@ -15,7 +15,23 @@ namespace CoreCX
             core = new Core(ConfigurationManager.AppSettings["base_currency"], ConfigurationManager.AppSettings["currency_pair_separator"][0]);
             proc = new Processor();
 
+
+            Console.WriteLine(core.CreateAccount(1));
             Console.WriteLine(core.CreateCurrencyPair("btc"));
+            Console.WriteLine(core.CreateAccount(2));
+            Console.WriteLine(core.CreateCurrencyPair("ltc"));
+            Console.WriteLine(core.CreateAccount(3));
+            Console.WriteLine();
+            Console.WriteLine(core.DepositFunds(1, "btc", 99999m));
+            Console.WriteLine(core.DepositFunds(1, "eur", 99999999m));
+            Console.WriteLine(core.DepositFunds(2, "btc", 2m));
+            Console.WriteLine(core.DepositFunds(2, "eur", 600m));
+            Console.WriteLine();
+            Order ord = null;
+            Console.WriteLine(core.PlaceLimit(1, "btc", false, 5m, 300m, 12L, 2, ref ord));
+            Console.WriteLine(core.PlaceLimit(1, "btc", true, 5m, 310m, 13L, 2, ref ord));
+            Console.WriteLine(core.PlaceMarket(2, "btc", false, false, 1m, 14L, 2, ref ord));
+            Console.WriteLine(core.PlaceMarket(2, "btc", true, false, 1m, 15L, 2, ref ord));
 
             proc.Start(); //старт исполнения функций из очередей в Main Thread
         }

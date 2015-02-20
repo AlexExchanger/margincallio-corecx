@@ -217,6 +217,122 @@ namespace CoreCX.Trading
             }
             else return StatusCodes.ErrorAccountNotFound;
         }
+        
+        internal StatusCodes PlaceLimit(int user_id, string derived_currency, bool side, decimal amount, decimal rate, long func_call_id, int fc_source, ref Order order, string external_data = null) //подать лимитную заявку
+        {
+            OrderBook book;
+            if (OrderBooks.TryGetValue(derived_currency, out book)) //проверка на существование стакана
+            {
+                return BaseLimit(user_id, derived_currency, book, side, amount, rate, (int)MessageTypes.NewPlaceLimit, func_call_id, fc_source, ref order, external_data);
+            }
+            else return StatusCodes.ErrorCurrencyPairNotFound;           
+        }
+
+        internal StatusCodes PlaceMarket(int user_id, string derived_currency, bool side, bool base_amount, decimal amount, long func_call_id, int fc_source, ref Order order, string external_data = null) //подать рыночную заявку
+        {
+            OrderBook book;
+            if (OrderBooks.TryGetValue(derived_currency, out book)) //проверка на существование стакана
+            {
+                if (!side) //если заявка на покупку (0)
+                {
+                    if (!base_amount) //amount задан в производной валюте
+                    {
+                        //калькуляция rate для немедленного исполнения по рынку
+                        decimal market_rate = 0m;
+                        decimal accumulated_amount = 0m;
+                        for (int i = book.ActiveSellOrders.Count - 1; i >= 0; i--)
+                        {
+                            accumulated_amount += book.ActiveSellOrders[i].ActualAmount;
+                            if (accumulated_amount >= amount) //если объём накопленных заявок на продажу покрывает объём заявки на покупку
+                            {
+                                market_rate = book.ActiveSellOrders[i].Rate;
+                                break;
+                            }
+                        }
+
+                        if (market_rate == 0) return StatusCodes.ErrorInsufficientMarketVolume;
+
+                        return BaseLimit(user_id, derived_currency, book, side, amount, market_rate, (int)MessageTypes.NewPlaceMarket, func_call_id, fc_source, ref order, external_data);
+                    }
+                    else //amount задан в базовой валюте
+                    {
+                        //калькуляция rate для немедленного исполнения по рынку
+                        decimal market_rate = 0m;
+                        decimal accumulated_amount = 0m; //в производной валюте
+                        decimal accumulated_total = 0m; //в базовой валюте
+                        for (int i = book.ActiveSellOrders.Count - 1; i >= 0; i--)
+                        {
+                            Order sell_ord = book.ActiveSellOrders[i];
+                            accumulated_total += sell_ord.ActualAmount * sell_ord.Rate;
+                            if (accumulated_total >= amount) //если накопленная сумма в заявках на продажу превышает сумму в заявке на покупку
+                            {
+                                accumulated_amount += (amount - accumulated_total + sell_ord.ActualAmount * sell_ord.Rate) / sell_ord.Rate;
+                                market_rate = sell_ord.Rate;
+                                break;
+                            }
+                            else //если ещё не превышает - учитываем amount производной валюты
+                            {
+                                accumulated_amount += sell_ord.ActualAmount;
+                            }
+                        }
+
+                        if (market_rate == 0) return StatusCodes.ErrorInsufficientMarketVolume;
+
+                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, (int)MessageTypes.NewPlaceInstant, func_call_id, fc_source, ref order, external_data);
+                    }
+                }
+                else //если заявка на продажу (1)
+                {
+                    if (!base_amount) //amount задан в производной валюте
+                    {
+                        //калькуляция rate для немедленного исполнения по рынку
+                        decimal market_rate = 0m;
+                        decimal accumulated_amount = 0m;
+                        for (int i = book.ActiveBuyOrders.Count - 1; i >= 0; i--)
+                        {
+                            accumulated_amount += book.ActiveBuyOrders[i].ActualAmount;
+                            if (accumulated_amount >= amount) //если объём накопленных заявок на покупку покрывает объём заявки на продажу
+                            {
+                                market_rate = book.ActiveBuyOrders[i].Rate;
+                                break;
+                            }
+                        }
+
+                        if (market_rate == 0) return StatusCodes.ErrorInsufficientMarketVolume;
+
+                        return BaseLimit(user_id, derived_currency, book, side, amount, market_rate, (int)MessageTypes.NewPlaceMarket, func_call_id, fc_source, ref order, external_data);
+                    }
+                    else //amount задан в базовой валюте
+                    {
+                        //калькуляция rate для немедленного исполнения по рынку
+                        decimal market_rate = 0m;
+                        decimal accumulated_amount = 0m; //в производной валюте
+                        decimal accumulated_total = 0m; //в базовой валюте
+                        for (int i = book.ActiveBuyOrders.Count - 1; i >= 0; i--)
+                        {
+                            Order buy_ord = book.ActiveBuyOrders[i];
+                            accumulated_total += buy_ord.ActualAmount * buy_ord.Rate;
+                            if (accumulated_total >= amount) //если накопленная сумма в заявках на покупку превышает сумму в заявке на продажу
+                            {
+                                accumulated_amount += (amount - accumulated_total + buy_ord.ActualAmount * buy_ord.Rate) / buy_ord.Rate;
+                                market_rate = buy_ord.Rate;
+                                break;
+                            }
+                            else //если ещё не превышает - учитываем amount производной валюты
+                            {
+                                accumulated_amount += buy_ord.ActualAmount;
+                            }
+                        }
+
+                        if (market_rate == 0) return StatusCodes.ErrorInsufficientMarketVolume;
+
+                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, (int)MessageTypes.NewPlaceInstant, func_call_id, fc_source, ref order, external_data);
+                    }
+                }
+            }
+            else return StatusCodes.ErrorCurrencyPairNotFound;
+        }
+
 
 
 
@@ -276,7 +392,66 @@ namespace CoreCX.Trading
 
         #region SERVICE CORE FUNCTIONS
 
-        #region MATCHING
+        #region ORDER PLACEMENT & MATCHING
+
+        private StatusCodes BaseLimit(int user_id, string derived_currency, OrderBook book, bool side, decimal amount, decimal rate, int msg_type, long func_call_id, int fc_source, ref Order order, string external_data) //базовый метод размещения заявки 
+        {
+            //реплицировать
+
+            Account acc;
+            if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то снимаем с него сумму и подаём заявку
+            {
+                if (acc.Suspended) return StatusCodes.ErrorAccountSuspended; //проверка на блокировку счёта
+                if (String.IsNullOrEmpty(derived_currency)) return StatusCodes.ErrorInvalidCurrency; //проверка на корректность производной валюты
+                if (amount <= 0 || rate <= 0) return StatusCodes.ErrorNegativeOrZeroSum; //проверка на положительность rate и amount 
+
+                if (!side) //если заявка на покупку (0)
+                {
+                    decimal sum = amount * rate;
+                    if (acc.BaseCFunds.AvailableFunds >= sum) //проверка на платежеспособность по базовой валюте
+                    {
+                        acc.BaseCFunds.AvailableFunds -= sum; //снимаем средства с доступных средств
+                        acc.BaseCFunds.BlockedFunds += sum; //блокируем средства в заявке на покупку
+                        //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                        order = new Order(user_id, amount, amount, rate, fc_source, external_data);
+                        book.InsertBuyOrder(order);
+                        //Pusher.NewOrder(msg_type, func_call_id, fc_source, side, order); //сообщение о новой заявке
+                        //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
+                        //if (fc_source == (int)FCSources.FixApi) FixMessager.NewExecutionReport(external_data, func_call_id, side, order); //FIX-сообщение о новой заявке
+                        Match(derived_currency, book);
+                        return StatusCodes.Success;
+                    }
+                    else
+                    {
+                        //TODO LONG MARGIN TRADING
+                        return StatusCodes.ErrorInsufficientMarketVolume;
+                    }
+                }
+                else //если заявка на продажу (0)
+                {
+                    DerivedFunds derived_funds = acc.DerivedCFunds[derived_currency];
+                    if (derived_funds.AvailableFunds >= amount) //проверка на платежеспособность по производной валюте
+                    {
+                        derived_funds.AvailableFunds -= amount; //снимаем средства с доступных средств
+                        derived_funds.BlockedFunds += amount; //блокируем средства в заявке на продажу
+                        //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                        order = new Order(user_id, amount, amount, rate, fc_source, external_data);
+                        book.InsertSellOrder(order);
+                        //Pusher.NewOrder(msg_type, func_call_id, fc_source, side, order); //сообщение о новой заявке
+                        //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
+                        //if (fc_source == (int)FCSources.FixApi) FixMessager.NewExecutionReport(external_data, func_call_id, side, order); //FIX-сообщение о новой заявке
+                        Match(derived_currency, book);
+                        return StatusCodes.Success;
+                    }
+                    else
+                    {
+                        //TODO SHORT MARGIN TRADING
+                        return StatusCodes.ErrorInsufficientMarketVolume;
+                    }
+                }
+            }
+            else return StatusCodes.ErrorAccountNotFound;
+        }
 
         private void Match(string derived_currency, OrderBook book) //выполняет метчинг текущих активных заявок в заданном стакане
         {

@@ -161,12 +161,12 @@ namespace CoreCX
         ErrorMarketOpened = 42,
         ErrorBackupRestoreInProc = 43,
         ErrorIPDuplicate = 44,
-        ErrorCurrencyAlreadyExists = 45,
-        ErrorCurrencyPairAlreadyExists = 46,
+        ErrorInvalidCurrency = 45,
+        ErrorInvalidCurrencyPair = 46,        
         ErrorCurrencyNotFound = 47,
-        ErrorInvalidCurrencyPair = 48,
-        ErrorInvalidCurrency = 49,
-
+        ErrorCurrencyPairNotFound = 48, 
+        ErrorCurrencyPairAlreadyExists = 49,
+        
 
         Unknown = 99
     }

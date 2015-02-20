@@ -4,7 +4,7 @@ namespace CoreCX.Trading
 {
     static class BSInsertion //глобальный класс упорядоченный вставки с помощью Binary Search
     {
-        internal static void AddBuyOrder(ref List<Order> orders, Order new_buy_order) //ASC для buy-заявок
+        internal static void AddBuyOrder(List<Order> orders, Order new_buy_order) //ASC для buy-заявок
         {
             if (orders.Count == 0)
             {
@@ -29,7 +29,7 @@ namespace CoreCX.Trading
             orders.Insert(index, new_buy_order);
         }
 
-        internal static void AddSellOrder(ref List<Order> orders, Order new_sell_order) //DESC для sell-заявок
+        internal static void AddSellOrder(List<Order> orders, Order new_sell_order) //DESC для sell-заявок
         {
             if (orders.Count == 0)
             {

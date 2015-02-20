@@ -19,5 +19,14 @@ namespace CoreCX.Trading
             ActiveSellStops = new List<Order>(2000);
         }
 
+        internal void InsertBuyOrder(Order order)
+        {
+            BSInsertion.AddBuyOrder(ActiveBuyOrders, order);
+        }
+
+        internal void InsertSellOrder(Order order)
+        {
+            BSInsertion.AddSellOrder(ActiveSellOrders, order);
+        }
     }
 }

@@ -11,6 +11,8 @@ namespace CoreCX.Trading
         internal decimal OriginalAmount { get; private set; }
         internal decimal ActualAmount { get; set; } //текущий объём заявки может изменяться
         internal decimal Rate { get; private set; }
+        internal int FCSource { get; private set; }
+        internal string ExternalData { get; private set; }
         internal DateTime DtMade { get; private set; }
 
         internal Order() //конструктор заявки по умолчанию
@@ -20,6 +22,8 @@ namespace CoreCX.Trading
             OriginalAmount = 0m;
             ActualAmount = 0m;
             Rate = 0m;
+            FCSource = 0;
+            ExternalData = "";
             DtMade = new DateTime();
         }
 
@@ -30,6 +34,20 @@ namespace CoreCX.Trading
             OriginalAmount = original_amount;
             ActualAmount = actual_amount;
             Rate = rate;
+            FCSource = 0;
+            ExternalData = "";
+            DtMade = DateTime.Now;
+        }
+
+        internal Order(int user_id, decimal original_amount, decimal actual_amount, decimal rate, int fc_source, string external_data) //конструктор заявки с внешними данными
+        {
+            OrderId = ++next_id; //инкремент id предыдущей заявки
+            UserId = user_id;
+            OriginalAmount = original_amount;
+            ActualAmount = actual_amount;
+            Rate = rate;
+            FCSource = fc_source;
+            ExternalData = external_data;
             DtMade = DateTime.Now;
         }
     }
