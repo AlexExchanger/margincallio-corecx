@@ -472,10 +472,8 @@ namespace CoreCX.Trading
                 Order sell_ord = book.ActiveSellOrders[book.ActiveSellOrders.Count - 1];
                 Account buyer = Accounts[buy_ord.UserId];
                 Account seller = Accounts[sell_ord.UserId];
-                DerivedFunds derived_buyer_funds = buyer.DerivedCFunds[derived_currency];
-                BaseFunds base_buyer_funds = buyer.BaseCFunds;
-                DerivedFunds derived_seller_funds = seller.DerivedCFunds[derived_currency];
-                BaseFunds base_seller_funds = seller.BaseCFunds;
+                DerivedFunds buyer_derived_funds = buyer.DerivedCFunds[derived_currency];
+                DerivedFunds seller_derived_funds = seller.DerivedCFunds[derived_currency];
                 
                 //поиск наиболее ранней заявки для определения initiator_kind, trade_rate (и комиссий)
                 bool initiator_kind;
@@ -497,18 +495,18 @@ namespace CoreCX.Trading
                 if (buy_ord.ActualAmount > sell_ord.ActualAmount) //1-ый вариант - объём buy-заявки больше
                 {
                     //добавляем объект Trade в коллекцию
-                    Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, initiator_kind, sell_ord.ActualAmount, trade_rate, sell_ord.ActualAmount * derived_buyer_funds.Fee, sell_ord.ActualAmount * trade_rate * derived_seller_funds.Fee);
+                    Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, initiator_kind, sell_ord.ActualAmount, trade_rate, sell_ord.ActualAmount * buyer_derived_funds.Fee, sell_ord.ActualAmount * trade_rate * seller_derived_funds.Fee);
                     //Pusher.NewTrade(trade); //сообщение о новой сделке
 
                     //начисляем продавцу сумму минус комиссия
-                    derived_seller_funds.BlockedFunds -= sell_ord.ActualAmount;
-                    base_seller_funds.AvailableFunds += sell_ord.ActualAmount * trade_rate * (1m - derived_seller_funds.Fee);
+                    seller_derived_funds.BlockedFunds -= sell_ord.ActualAmount;
+                    seller.BaseCFunds.AvailableFunds += sell_ord.ActualAmount * trade_rate * (1m - seller_derived_funds.Fee);
                     //Pusher.NewBalance(sell_ord.UserId, seller, DateTime.Now); //сообщение о новом балансе
 
                     //начисляем покупателю сумму минус комиссия плюс разницу
-                    base_buyer_funds.BlockedFunds -= sell_ord.ActualAmount * buy_ord.Rate;
-                    derived_buyer_funds.AvailableFunds += sell_ord.ActualAmount * (1m - derived_buyer_funds.Fee);
-                    base_buyer_funds.AvailableFunds += sell_ord.ActualAmount * (buy_ord.Rate - trade_rate);
+                    buyer.BaseCFunds.BlockedFunds -= sell_ord.ActualAmount * buy_ord.Rate;
+                    buyer_derived_funds.AvailableFunds += sell_ord.ActualAmount * (1m - buyer_derived_funds.Fee);
+                    buyer.BaseCFunds.AvailableFunds += sell_ord.ActualAmount * (buy_ord.Rate - trade_rate);
                     //Pusher.NewBalance(buy_ord.UserId, buyer, DateTime.Now); //сообщение о новом балансе
 
                     //buy-заявка становится partially filled => уменьшается её ActualAmount
@@ -532,18 +530,18 @@ namespace CoreCX.Trading
                 else if (buy_ord.ActualAmount < sell_ord.ActualAmount) //2-ой вариант - объём sell-заявки больше
                 {
                     //добавляем объект Trade в коллекцию
-                    Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, initiator_kind, buy_ord.ActualAmount, trade_rate, buy_ord.ActualAmount * derived_buyer_funds.Fee, buy_ord.ActualAmount * trade_rate * derived_seller_funds.Fee);
+                    Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, initiator_kind, buy_ord.ActualAmount, trade_rate, buy_ord.ActualAmount * buyer_derived_funds.Fee, buy_ord.ActualAmount * trade_rate * seller_derived_funds.Fee);
                     //Pusher.NewTrade(trade); //сообщение о новой сделке
 
                     //начисляем продавцу сумму минус комиссия
-                    derived_seller_funds.BlockedFunds -= buy_ord.ActualAmount;
-                    base_seller_funds.AvailableFunds += buy_ord.ActualAmount * trade_rate * (1m - derived_seller_funds.Fee);
+                    seller_derived_funds.BlockedFunds -= buy_ord.ActualAmount;
+                    seller.BaseCFunds.AvailableFunds += buy_ord.ActualAmount * trade_rate * (1m - seller_derived_funds.Fee);
                     //Pusher.NewBalance(sell_ord.UserId, seller, DateTime.Now); //сообщение о новом балансе
 
                     //начисляем покупателю сумму минус комиссия плюс разницу
-                    base_buyer_funds.BlockedFunds -= buy_ord.ActualAmount * buy_ord.Rate;
-                    derived_buyer_funds.AvailableFunds += buy_ord.ActualAmount * (1m - derived_buyer_funds.Fee);
-                    base_buyer_funds.AvailableFunds += buy_ord.ActualAmount * (buy_ord.Rate - trade_rate);
+                    buyer.BaseCFunds.BlockedFunds -= buy_ord.ActualAmount * buy_ord.Rate;
+                    buyer_derived_funds.AvailableFunds += buy_ord.ActualAmount * (1m - buyer_derived_funds.Fee);
+                    buyer.BaseCFunds.AvailableFunds += buy_ord.ActualAmount * (buy_ord.Rate - trade_rate);
                     //Pusher.NewBalance(buy_ord.UserId, buyer, DateTime.Now); //сообщение о новом балансе
 
                     //sell-заявка становится partially filled => уменьшается её ActualAmount
@@ -567,18 +565,18 @@ namespace CoreCX.Trading
                 else if (buy_ord.ActualAmount == sell_ord.ActualAmount) //3-ий вариант - объёмы заявок равны
                 {
                     //добавляем объект Trade в коллекцию
-                    Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, initiator_kind, buy_ord.ActualAmount, trade_rate, sell_ord.ActualAmount * derived_buyer_funds.Fee, sell_ord.ActualAmount * trade_rate * derived_seller_funds.Fee);
+                    Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, initiator_kind, buy_ord.ActualAmount, trade_rate, sell_ord.ActualAmount * buyer_derived_funds.Fee, sell_ord.ActualAmount * trade_rate * seller_derived_funds.Fee);
                     //Pusher.NewTrade(trade); //сообщение о новой сделке
 
                     //начисляем продавцу сумму минус комиссия
-                    derived_seller_funds.BlockedFunds -= buy_ord.ActualAmount;
-                    base_seller_funds.AvailableFunds += buy_ord.ActualAmount * trade_rate * (1m - derived_seller_funds.Fee);
+                    seller_derived_funds.BlockedFunds -= buy_ord.ActualAmount;
+                    seller.BaseCFunds.AvailableFunds += buy_ord.ActualAmount * trade_rate * (1m - seller_derived_funds.Fee);
                     //Pusher.NewBalance(sell_ord.UserId, seller, DateTime.Now); //сообщение о новом балансе
 
                     //начисляем покупателю сумму минус комиссия плюс разницу
-                    base_buyer_funds.BlockedFunds -= buy_ord.ActualAmount * buy_ord.Rate;
-                    derived_buyer_funds.AvailableFunds += buy_ord.ActualAmount * (1m - derived_buyer_funds.Fee);
-                    base_buyer_funds.AvailableFunds += buy_ord.ActualAmount * (buy_ord.Rate - trade_rate);
+                    buyer.BaseCFunds.BlockedFunds -= buy_ord.ActualAmount * buy_ord.Rate;
+                    buyer_derived_funds.AvailableFunds += buy_ord.ActualAmount * (1m - buyer_derived_funds.Fee);
+                    buyer.BaseCFunds.AvailableFunds += buy_ord.ActualAmount * (buy_ord.Rate - trade_rate);
                     //Pusher.NewBalance(buy_ord.UserId, buyer, DateTime.Now); //сообщение о новом балансе
 
                     //buy-заявка становится filled => её ActualAmount становится нулевым
