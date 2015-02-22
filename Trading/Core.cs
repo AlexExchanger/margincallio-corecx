@@ -11,6 +11,7 @@ namespace CoreCX.Trading
         #region DATA COLLECTIONS
 
         private Dictionary<int, Account> Accounts; //торговые счета "ID юзера -> торговый счёт"
+        private Dictionary<int, Account> Debitors; //счета дебиторов (использующих заёмные средства)
         private Dictionary<string, OrderBook> OrderBooks; //словарь "производная валюта -> стакан"	
         //private Dictionary<long, OrdCancData> OrderCancellationData; //словарь для закрытия заявок
         private Dictionary<string, FixAccount> FixAccounts; //FIX-аккаунты
@@ -43,6 +44,7 @@ namespace CoreCX.Trading
         internal Core(string base_currency, char currency_pair_separator)
         {
             Accounts = new Dictionary<int, Account>(3000);
+            Debitors = new Dictionary<int, Account>(1000);
             OrderBooks = new Dictionary<string, OrderBook>(10);            
             FixAccounts = new Dictionary<string, FixAccount>(500);
             ApiKeys = new Dictionary<string, ApiKey>(500);
@@ -220,6 +222,8 @@ namespace CoreCX.Trading
         
         internal StatusCodes PlaceLimit(int user_id, string derived_currency, bool side, decimal amount, decimal rate, long func_call_id, int fc_source, string external_data = null) //подать лимитную заявку
         {
+            //реплицировать
+
             OrderBook book;
             if (OrderBooks.TryGetValue(derived_currency, out book)) //проверка на существование стакана
             {
@@ -230,6 +234,8 @@ namespace CoreCX.Trading
 
         internal StatusCodes PlaceMarket(int user_id, string derived_currency, bool side, bool base_amount, decimal amount, long func_call_id, int fc_source, string external_data = null) //подать рыночную заявку
         {
+            //реплицировать
+
             OrderBook book;
             if (OrderBooks.TryGetValue(derived_currency, out book)) //проверка на существование стакана
             {
@@ -359,6 +365,8 @@ namespace CoreCX.Trading
 
         internal StatusCodes CreateCurrencyPair(string derived_currency)
         {
+            //реплицировать
+
             //проверка символа производной валюты на пустоту
             if (!String.IsNullOrEmpty(derived_currency))
             {
@@ -399,6 +407,8 @@ namespace CoreCX.Trading
 
         internal StatusCodes DeleteCurrencyPair() // TODO IN MARCH
         {
+            //реплицировать
+
             return StatusCodes.Success;
         }
         
@@ -464,8 +474,9 @@ namespace CoreCX.Trading
                         }
                         if ((debit + credit) * acc.MaxLeverage + credit >= sum)
                         {
+                            if (!Debitors.ContainsKey(user_id)) Debitors.Add(user_id, acc); //добавление юзера в словарь дебиторов
                             acc.BaseCFunds.AvailableFunds -= sum; //снимаем средства с доступных средств
-                            acc.BaseCFunds.BlockedFunds += sum; //блокируем средства в заявке на покупку
+                            acc.BaseCFunds.BlockedFunds += sum; //блокируем средства в заявке на покупку                            
                             //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
                             Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
                             book.InsertBuyOrder(order);
@@ -523,6 +534,7 @@ namespace CoreCX.Trading
                         }
                         if ((debit + credit) * acc.MaxLeverage + credit >= amount * rate)
                         {
+                            if (!Debitors.ContainsKey(user_id)) Debitors.Add(user_id, acc); //добавление юзера в словарь дебиторов
                             derived_funds.AvailableFunds -= amount; //снимаем средства с доступных средств
                             derived_funds.BlockedFunds += amount; //блокируем средства в заявке на продажу
                             //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
@@ -697,6 +709,57 @@ namespace CoreCX.Trading
         }
 
         #endregion
+
+        #region PERIODIC EXECUTION
+
+        private void ManageMargin() //расчёт маржинальных параметров, выполнение MC/FL в случае необходимости
+        {
+            //проверка каждого дебитора
+            foreach (KeyValuePair<int, Account> acc in Debitors)
+            {
+                //расчёт параметров
+                decimal debit = 0m;
+                decimal credit = 0m;
+                if (acc.Value.BaseCFunds.AvailableFunds > 0m) debit += acc.Value.BaseCFunds.AvailableFunds; //начисляем дебету положительную сумму в базовой валюте
+                else credit += acc.Value.BaseCFunds.AvailableFunds; //начисляем кредиту отрицательную сумму в базовой валюте
+                foreach (KeyValuePair<string, DerivedFunds> funds in acc.Value.DerivedCFunds) //учёт сумм в производных валютах, приведённых к базовой
+                {
+                    if (funds.Value.AvailableFunds == 0m) continue;
+                    //калькуляция рыночного курса на покупку (лонг будет распродаваться)
+                    OrderBook cur_book = OrderBooks[funds.Key];
+                    decimal long_market_rate = 0m;
+                    decimal long_accumulated_amount = 0m;
+                    for (int i = cur_book.ActiveBuyOrders.Count - 1; i >= 0; i--)
+                    {
+                        long_accumulated_amount += cur_book.ActiveBuyOrders[i].ActualAmount;
+                        if (long_accumulated_amount >= Math.Abs(funds.Value.AvailableFunds)) //если объём накопленных заявок на продажу превышает сумму в производной валюте на счёте
+                        {
+                            long_market_rate = cur_book.ActiveBuyOrders[i].Rate;
+                            break;
+                        }
+                    }
+
+                    if (funds.Value.AvailableFunds > 0m) debit += funds.Value.AvailableFunds * long_market_rate; //начисляем дебету положительную сумму в базовой валюте
+                    else credit += funds.Value.AvailableFunds * long_market_rate; //начисляем кредиту отрицательную сумму в базовой валюте
+                }
+                //if ((debit + credit) * acc.Value.MaxLeverage + credit >= sum)
+                {
+                    //if (!Debitors.ContainsKey(user_id)) Debitors.Add(user_id, acc); //добавление юзера в словарь дебиторов
+                    //acc.Value.BaseCFunds.AvailableFunds -= sum; //снимаем средства с доступных средств
+                    //acc.Value.BaseCFunds.BlockedFunds += sum; //блокируем средства в заявке на покупку                            
+                    //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                    //Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
+                    //book.InsertBuyOrder(order);
+                    //Pusher.NewOrder(msg_type, func_call_id, fc_source, side, order); //сообщение о новой заявке
+                    //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
+                    //if (fc_source == (int)FCSources.FixApi) FixMessager.NewExecutionReport(external_data, func_call_id, side, order); //FIX-сообщение о новой заявке
+                    //Match(derived_currency, book);
+                }
+            }
+        }
+
+        #endregion
+
 
         #region CURRENCY PAIR MANAGEMENT
 
