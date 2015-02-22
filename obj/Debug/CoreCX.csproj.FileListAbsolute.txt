@@ -5,3 +5,4 @@ C:\Users\varsize\Documents\SpaceBTC Project\CoreCX\obj\Debug\CoreCX.exe
 C:\Users\varsize\Documents\SpaceBTC Project\CoreCX\obj\Debug\CoreCX.pdb
 C:\Users\varsize\Documents\SpaceBTC Project\CoreCX\bin\Debug\Newtonsoft.Json.dll
 C:\Users\varsize\Documents\SpaceBTC Project\CoreCX\bin\Debug\QuickFix.dll
+C:\Users\varsize\Documents\SpaceBTC Project\CoreCX\obj\Debug\CoreCX.csprojResolveAssemblyReference.cache

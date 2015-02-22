@@ -218,17 +218,17 @@ namespace CoreCX.Trading
             else return StatusCodes.ErrorAccountNotFound;
         }
         
-        internal StatusCodes PlaceLimit(int user_id, string derived_currency, bool side, decimal amount, decimal rate, long func_call_id, int fc_source, ref Order order, string external_data = null) //подать лимитную заявку
+        internal StatusCodes PlaceLimit(int user_id, string derived_currency, bool side, decimal amount, decimal rate, long func_call_id, int fc_source, string external_data = null) //подать лимитную заявку
         {
             OrderBook book;
             if (OrderBooks.TryGetValue(derived_currency, out book)) //проверка на существование стакана
             {
-                return BaseLimit(user_id, derived_currency, book, side, amount, rate, (int)MessageTypes.NewPlaceLimit, func_call_id, fc_source, ref order, external_data);
+                return BaseLimit(user_id, derived_currency, book, side, amount, rate, (int)MessageTypes.NewPlaceLimit, func_call_id, fc_source, external_data);
             }
             else return StatusCodes.ErrorCurrencyPairNotFound;           
         }
 
-        internal StatusCodes PlaceMarket(int user_id, string derived_currency, bool side, bool base_amount, decimal amount, long func_call_id, int fc_source, ref Order order, string external_data = null) //подать рыночную заявку
+        internal StatusCodes PlaceMarket(int user_id, string derived_currency, bool side, bool base_amount, decimal amount, long func_call_id, int fc_source, string external_data = null) //подать рыночную заявку
         {
             OrderBook book;
             if (OrderBooks.TryGetValue(derived_currency, out book)) //проверка на существование стакана
@@ -252,7 +252,7 @@ namespace CoreCX.Trading
 
                         if (market_rate == 0) return StatusCodes.ErrorInsufficientMarketVolume;
 
-                        return BaseLimit(user_id, derived_currency, book, side, amount, market_rate, (int)MessageTypes.NewPlaceMarket, func_call_id, fc_source, ref order, external_data);
+                        return BaseLimit(user_id, derived_currency, book, side, amount, market_rate, (int)MessageTypes.NewPlaceMarket, func_call_id, fc_source, external_data);
                     }
                     else //amount задан в базовой валюте
                     {
@@ -278,7 +278,7 @@ namespace CoreCX.Trading
 
                         if (market_rate == 0) return StatusCodes.ErrorInsufficientMarketVolume;
 
-                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, (int)MessageTypes.NewPlaceInstant, func_call_id, fc_source, ref order, external_data);
+                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, (int)MessageTypes.NewPlaceInstant, func_call_id, fc_source, external_data);
                     }
                 }
                 else //если заявка на продажу (1)
@@ -300,7 +300,7 @@ namespace CoreCX.Trading
 
                         if (market_rate == 0) return StatusCodes.ErrorInsufficientMarketVolume;
 
-                        return BaseLimit(user_id, derived_currency, book, side, amount, market_rate, (int)MessageTypes.NewPlaceMarket, func_call_id, fc_source, ref order, external_data);
+                        return BaseLimit(user_id, derived_currency, book, side, amount, market_rate, (int)MessageTypes.NewPlaceMarket, func_call_id, fc_source, external_data);
                     }
                     else //amount задан в базовой валюте
                     {
@@ -326,7 +326,7 @@ namespace CoreCX.Trading
 
                         if (market_rate == 0) return StatusCodes.ErrorInsufficientMarketVolume;
 
-                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, (int)MessageTypes.NewPlaceInstant, func_call_id, fc_source, ref order, external_data);
+                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, (int)MessageTypes.NewPlaceInstant, func_call_id, fc_source, external_data);
                     }
                 }
             }
@@ -410,10 +410,8 @@ namespace CoreCX.Trading
 
         #region ORDER PLACEMENT & MATCHING
 
-        private StatusCodes BaseLimit(int user_id, string derived_currency, OrderBook book, bool side, decimal amount, decimal rate, int msg_type, long func_call_id, int fc_source, ref Order order, string external_data) //базовый метод размещения заявки 
+        private StatusCodes BaseLimit(int user_id, string derived_currency, OrderBook book, bool side, decimal amount, decimal rate, int msg_type, long func_call_id, int fc_source, string external_data) //базовый метод размещения заявки 
         {
-            //реплицировать
-
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то снимаем с него сумму и подаём заявку
             {
@@ -429,7 +427,7 @@ namespace CoreCX.Trading
                         acc.BaseCFunds.AvailableFunds -= sum; //снимаем средства с доступных средств
                         acc.BaseCFunds.BlockedFunds += sum; //блокируем средства в заявке на покупку
                         //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
-                        order = new Order(user_id, amount, amount, rate, fc_source, external_data);
+                        Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
                         book.InsertBuyOrder(order);
                         //Pusher.NewOrder(msg_type, func_call_id, fc_source, side, order); //сообщение о новой заявке
                         //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
@@ -469,7 +467,7 @@ namespace CoreCX.Trading
                             acc.BaseCFunds.AvailableFunds -= sum; //снимаем средства с доступных средств
                             acc.BaseCFunds.BlockedFunds += sum; //блокируем средства в заявке на покупку
                             //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
-                            order = new Order(user_id, amount, amount, rate, fc_source, external_data);
+                            Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
                             book.InsertBuyOrder(order);
                             //Pusher.NewOrder(msg_type, func_call_id, fc_source, side, order); //сообщение о новой заявке
                             //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
@@ -488,7 +486,7 @@ namespace CoreCX.Trading
                         derived_funds.AvailableFunds -= amount; //снимаем средства с доступных средств
                         derived_funds.BlockedFunds += amount; //блокируем средства в заявке на продажу
                         //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
-                        order = new Order(user_id, amount, amount, rate, fc_source, external_data);
+                        Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
                         book.InsertSellOrder(order);
                         //Pusher.NewOrder(msg_type, func_call_id, fc_source, side, order); //сообщение о новой заявке
                         //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
@@ -528,7 +526,7 @@ namespace CoreCX.Trading
                             derived_funds.AvailableFunds -= amount; //снимаем средства с доступных средств
                             derived_funds.BlockedFunds += amount; //блокируем средства в заявке на продажу
                             //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
-                            order = new Order(user_id, amount, amount, rate, fc_source, external_data);
+                            Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
                             book.InsertSellOrder(order);
                             //Pusher.NewOrder(msg_type, func_call_id, fc_source, side, order); //сообщение о новой заявке
                             //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
