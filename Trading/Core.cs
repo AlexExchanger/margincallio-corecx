@@ -724,36 +724,67 @@ namespace CoreCX.Trading
                 else credit += acc.Value.BaseCFunds.AvailableFunds; //начисляем кредиту отрицательную сумму в базовой валюте
                 foreach (KeyValuePair<string, DerivedFunds> funds in acc.Value.DerivedCFunds) //учёт сумм в производных валютах, приведённых к базовой
                 {
-                    if (funds.Value.AvailableFunds == 0m) continue;
-                    //калькуляция рыночного курса на покупку (лонг будет распродаваться)
-                    OrderBook cur_book = OrderBooks[funds.Key];
-                    decimal long_market_rate = 0m;
-                    decimal long_accumulated_amount = 0m;
-                    for (int i = cur_book.ActiveBuyOrders.Count - 1; i >= 0; i--)
+                    if (funds.Value.AvailableFunds == 0m) continue;                    
+                    OrderBook cur_book = OrderBooks[funds.Key]; //получение стакана для пары с текущей производной валютой
+                    bool positive = (funds.Value.AvailableFunds > 0m); //определение debit/credit
+                    List<Order> ActiveOrders = positive ? cur_book.ActiveBuyOrders : cur_book.ActiveSellOrders; //определение направления калькуляции рыночной цены (buy/sell)
+
+                    decimal market_rate = 0m;
+                    decimal accumulated_amount = 0m;
+                    for (int i = ActiveOrders.Count - 1; i >= 0; i--)
                     {
-                        long_accumulated_amount += cur_book.ActiveBuyOrders[i].ActualAmount;
-                        if (long_accumulated_amount >= Math.Abs(funds.Value.AvailableFunds)) //если объём накопленных заявок на продажу превышает сумму в производной валюте на счёте
+                        accumulated_amount += ActiveOrders[i].ActualAmount;
+                        if (accumulated_amount >= (positive ? funds.Value.AvailableFunds : funds.Value.AvailableFunds * (-1m))) //если объём накопленных заявок превышает сумму в производной валюте на счёте
                         {
-                            long_market_rate = cur_book.ActiveBuyOrders[i].Rate;
+                            market_rate = ActiveOrders[i].Rate;
                             break;
                         }
                     }
 
-                    if (funds.Value.AvailableFunds > 0m) debit += funds.Value.AvailableFunds * long_market_rate; //начисляем дебету положительную сумму в базовой валюте
-                    else credit += funds.Value.AvailableFunds * long_market_rate; //начисляем кредиту отрицательную сумму в базовой валюте
+                    if (positive) debit += funds.Value.AvailableFunds * market_rate; //начисляем дебету положительную сумму в базовой валюте
+                    else credit += funds.Value.AvailableFunds * market_rate; //начисляем кредиту отрицательную сумму в базовой валюте
                 }
-                //if ((debit + credit) * acc.Value.MaxLeverage + credit >= sum)
+                //проверка на использование заёмных средств
+                if (credit == 0m)
                 {
-                    //if (!Debitors.ContainsKey(user_id)) Debitors.Add(user_id, acc); //добавление юзера в словарь дебиторов
-                    //acc.Value.BaseCFunds.AvailableFunds -= sum; //снимаем средства с доступных средств
-                    //acc.Value.BaseCFunds.BlockedFunds += sum; //блокируем средства в заявке на покупку                            
-                    //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
-                    //Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
-                    //book.InsertBuyOrder(order);
-                    //Pusher.NewOrder(msg_type, func_call_id, fc_source, side, order); //сообщение о новой заявке
-                    //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
-                    //if (fc_source == (int)FCSources.FixApi) FixMessager.NewExecutionReport(external_data, func_call_id, side, order); //FIX-сообщение о новой заявке
-                    //Match(derived_currency, book);
+                    if (acc.Value.MarginCall) acc.Value.MarginCall = false; //сбрасываем флаг Margin Call
+                    if (acc.Value.Equity != 0m)
+                    {
+                        acc.Value.Equity = 0m;
+                        acc.Value.Margin = 0m;
+                        acc.Value.FreeMargin = 0m;
+                        acc.Value.MarginLevel = 0m;
+                        //Pusher.NewMarginInfo(account.Key, 0m, 100m, DateTime.Now); //сообщение о новом уровне маржи
+                    }
+                    Debitors.Remove(acc.Key);
+                    continue;
+                }
+                decimal equity = debit + credit;
+                decimal margin = (-1m) * credit / acc.Value.MaxLeverage;
+                decimal margin_level = equity / margin;
+                if (acc.Value.Equity != equity) //обновляем параметры аккаунта, если equity изменился
+                {
+                    acc.Value.Equity = equity;
+                    acc.Value.Margin = margin;
+                    acc.Value.FreeMargin = equity - margin;
+                    acc.Value.MarginLevel = margin_level * 100m;
+                    //Pusher.NewMarginInfo(account.Key, account.Value.Equity, account.Value.MarginLevel * 100m, DateTime.Now); //сообщение о новом уровне маржи
+                }
+                //проверка условия Margin Call
+                if (margin_level <= acc.Value.LevelMC)
+                {
+                    if (!acc.Value.MarginCall)
+                    {
+                        acc.Value.MarginCall = true;
+                        //Pusher.NewMarginCall(account.Key, DateTime.Now); //сообщение о новом Margin Call
+                    }
+                }
+                else if (acc.Value.MarginCall) acc.Value.MarginCall = false; //сброс флага Margin Call
+                //проверка условия Forced Liquidation
+                if (margin_level <= acc.Value.LevelFL)
+                {
+                    //поиск и ликвидация актива с наибольшей рыночной стоимостью
+
                 }
             }
         }

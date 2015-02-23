@@ -15,6 +15,7 @@ namespace CoreCX.Trading
         internal decimal Margin { get; set; } //текущая маржа
         internal decimal FreeMargin { get; set; } //текущая свободная маржа
         internal decimal MarginLevel { get; set; } //текущий уровень маржи
+        internal bool MarginCall { get; set; } //флаг Margin Call
         internal bool Suspended { get; set; } //флаг блокировки торгового счёта
 
         internal Account()
@@ -28,6 +29,7 @@ namespace CoreCX.Trading
             Margin = 0m;
             FreeMargin = 0m;
             MarginLevel = 0m;
+            MarginCall = new bool();
             Suspended = new bool();
         }
     }
