@@ -717,14 +717,18 @@ namespace CoreCX.Trading
             //проверка каждого дебитора
             foreach (KeyValuePair<int, Account> acc in Debitors)
             {
-                //расчёт параметров
+                //объявление необходимых переменных
                 decimal debit = 0m;
-                decimal credit = 0m;
+                decimal credit = 0m;                
+
+                //оценка суммы в базовой валюте
                 if (acc.Value.BaseCFunds.AvailableFunds > 0m) debit += acc.Value.BaseCFunds.AvailableFunds; //начисляем дебету положительную сумму в базовой валюте
                 else credit += acc.Value.BaseCFunds.AvailableFunds; //начисляем кредиту отрицательную сумму в базовой валюте
-                foreach (KeyValuePair<string, DerivedFunds> funds in acc.Value.DerivedCFunds) //учёт сумм в производных валютах, приведённых к базовой
+
+                //оценка сумм в производных валютах, приведённых к базовой
+                foreach (KeyValuePair<string, DerivedFunds> funds in acc.Value.DerivedCFunds)
                 {
-                    if (funds.Value.AvailableFunds == 0m) continue;                    
+                    if (funds.Value.AvailableFunds == 0m) continue;
                     OrderBook cur_book = OrderBooks[funds.Key]; //получение стакана для пары с текущей производной валютой
                     bool positive = (funds.Value.AvailableFunds > 0m); //определение debit/credit
                     List<Order> ActiveOrders = positive ? cur_book.ActiveBuyOrders : cur_book.ActiveSellOrders; //определение направления калькуляции рыночной цены (buy/sell)
@@ -740,7 +744,7 @@ namespace CoreCX.Trading
                             break;
                         }
                     }
-
+                    
                     if (positive) debit += funds.Value.AvailableFunds * market_rate; //начисляем дебету положительную сумму в базовой валюте
                     else credit += funds.Value.AvailableFunds * market_rate; //начисляем кредиту отрицательную сумму в базовой валюте
                 }
@@ -748,14 +752,11 @@ namespace CoreCX.Trading
                 if (credit == 0m)
                 {
                     if (acc.Value.MarginCall) acc.Value.MarginCall = false; //сбрасываем флаг Margin Call
-                    if (acc.Value.Equity != 0m)
-                    {
-                        acc.Value.Equity = 0m;
-                        acc.Value.Margin = 0m;
-                        acc.Value.FreeMargin = 0m;
-                        acc.Value.MarginLevel = 0m;
-                        //Pusher.NewMarginInfo(account.Key, 0m, 100m, DateTime.Now); //сообщение о новом уровне маржи
-                    }
+                    acc.Value.Equity = 0m;
+                    acc.Value.Margin = 0m;
+                    acc.Value.FreeMargin = 0m;
+                    acc.Value.MarginLevel = 0m;
+                    //Pusher.NewMarginInfo(account.Key, 0m, 100m, DateTime.Now); //сообщение о новом уровне маржи
                     Debitors.Remove(acc.Key);
                     continue;
                 }
@@ -783,8 +784,44 @@ namespace CoreCX.Trading
                 //проверка условия Forced Liquidation
                 if (margin_level <= acc.Value.LevelFL)
                 {
-                    //поиск и ликвидация актива с наибольшей рыночной стоимостью
+                    //поиск валюты с наибольшей рыночной стоимостью суммы
+                    string fl_derived_currency = null;
+                    OrderBook fl_book = null;
+                    decimal fl_amount = 0m;
+                    decimal fl_market_rate = 0m;
 
+                    foreach (KeyValuePair<string, DerivedFunds> funds in acc.Value.DerivedCFunds)
+                    {
+                        if (funds.Value.AvailableFunds == 0m) continue;
+                        OrderBook cur_book = OrderBooks[funds.Key]; //получение стакана для пары с текущей производной валютой
+                        bool positive = (funds.Value.AvailableFunds > 0m); //определение debit/credit
+                        List<Order> ActiveOrders = positive ? cur_book.ActiveBuyOrders : cur_book.ActiveSellOrders; //определение направления калькуляции рыночной цены (buy/sell)
+
+                        decimal market_rate = 0m;
+                        decimal accumulated_amount = 0m;
+                        for (int i = ActiveOrders.Count - 1; i >= 0; i--)
+                        {
+                            accumulated_amount += ActiveOrders[i].ActualAmount;
+                            if (accumulated_amount >= (positive ? funds.Value.AvailableFunds : funds.Value.AvailableFunds * (-1m))) //если объём накопленных заявок превышает сумму в производной валюте на счёте
+                            {
+                                market_rate = ActiveOrders[i].Rate;
+                                break;
+                            }
+                        }
+
+                        if (positive) debit += funds.Value.AvailableFunds * market_rate; //начисляем дебету положительную сумму в базовой валюте
+                        else credit += funds.Value.AvailableFunds * market_rate; //начисляем кредиту отрицательную сумму в базовой валюте
+                    }
+                    
+                    //acc.BaseCFunds.AvailableFunds -= sum; //снимаем средства с доступных средств
+                    //acc.BaseCFunds.BlockedFunds += sum; //блокируем средства в заявке на покупку                            
+                    //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                    //Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
+                    //book.InsertBuyOrder(order);
+                    //Pusher.NewOrder(msg_type, func_call_id, fc_source, side, order); //сообщение о новой заявке
+                    //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
+                    //if (fc_source == (int)FCSources.FixApi) FixMessager.NewExecutionReport(external_data, func_call_id, side, order); //FIX-сообщение о новой заявке
+                    //Match(derived_currency, book);
                 }
             }
         }
