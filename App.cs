@@ -37,6 +37,9 @@ namespace CoreCX
             Console.WriteLine(core.PlaceLimit(1, "ltc", true, 250m, 11m, 17L, 2));
 
             Console.WriteLine(core.PlaceMarket(2, "btc", false, false, 5m, 18L, 2));
+            core.ManageMargin();
+
+            //core.WithdrawFunds(2, "eur", 74.73m);
 
             Console.WriteLine(core.PlaceLimit(1, "btc", false, 50m, 240m, 12L, 2));
             Console.WriteLine(core.PlaceLimit(1, "btc", true, 100m, 242m, 13L, 2));

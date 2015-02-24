@@ -128,7 +128,7 @@ namespace CoreCX
         ErrorOrderNotFound = 9,
         ErrorInsufficientMarketVolume = 10,
         ErrorBorrowedFundsUse = 11,
-        ErrorNegativeOrZeroSum = 12,
+        ErrorNegativeOrZeroAmount = 12,
         ErrorNegativeOrZeroId = 13,
         ErrorApiKeyNotPrivileged = 14,
         ErrorIncorrectPositionType = 15,
