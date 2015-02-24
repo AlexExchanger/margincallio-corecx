@@ -153,7 +153,7 @@ namespace CoreCX.Trading
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то пополняем
             {
-                if (sum > 0m) //проверка на положительность суммы пополнения
+                //if (sum > 0m) //проверка на положительность суммы пополнения
                 {
                     if (currency == base_currency) //пополнение базовой валюты
                     {
@@ -173,7 +173,7 @@ namespace CoreCX.Trading
                         else return StatusCodes.ErrorCurrencyNotFound;
                     }                    
                 }
-                else return StatusCodes.ErrorNegativeOrZeroSum;
+                //else return StatusCodes.ErrorNegativeOrZeroSum;
             }
             else return StatusCodes.ErrorAccountNotFound;
         }
@@ -726,8 +726,11 @@ namespace CoreCX.Trading
 
         #region PERIODIC EXECUTION
 
-        private void ManageMargin() //расчёт маржинальных параметров, выполнение MC/FL в случае необходимости
+        internal void ManageMargin() //расчёт маржинальных параметров, выполнение MC/FL в случае необходимости
         {
+            //учёт id юзеров, закрывших позиции с плечом
+            List<int> ids_to_rm = new List<int>();
+
             //проверка каждого дебитора
             foreach (KeyValuePair<int, Account> acc in Debitors)
             {
@@ -773,7 +776,7 @@ namespace CoreCX.Trading
                     acc.Value.FreeMargin = 0m;
                     acc.Value.MarginLevel = 0m;
                     //Pusher.NewMarginInfo(account.Key, 0m, 100m, DateTime.Now); //сообщение о новом уровне маржи
-                    Debitors.Remove(acc.Key);
+                    ids_to_rm.Add(acc.Key); //Debitors.Remove(acc.Key);
                     continue;
                 }
 
@@ -871,6 +874,11 @@ namespace CoreCX.Trading
                         Match(fl_derived_currency, fl_book);
                     }
                 }
+            }
+
+            for (int i = 0; i < ids_to_rm.Count; i++)
+            {
+                Debitors.Remove(ids_to_rm[i]);
             }
         }
 
