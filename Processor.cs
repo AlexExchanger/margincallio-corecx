@@ -33,7 +33,7 @@ namespace CoreCX
                 Action prdf_action;
                 if (Queues.prdf_queue.TryDequeue(out prdf_action))
                 {
-                    //Console.WriteLine("MAIN THREAD: EXECUTING PRDF ITEM");                    
+                    Console.WriteLine("MAIN THREAD: EXECUTING PRDF ITEM");                    
                     try
                     {
                         prdf_action();

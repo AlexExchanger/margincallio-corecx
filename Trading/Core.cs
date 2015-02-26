@@ -14,6 +14,7 @@ namespace CoreCX.Trading
         private Dictionary<int, Account> Debitors; //счета дебиторов (использующих заёмные средства)
         private Dictionary<string, OrderBook> OrderBooks; //словарь "производная валюта -> стакан"	
         private Dictionary<long, OrdCancData> CancelLimitDict; //словарь "ID заявки -> параметры и стакан"
+
         private Dictionary<string, FixAccount> FixAccounts; //FIX-аккаунты
         private Dictionary<string, ApiKey> ApiKeys; //API-ключи
 
