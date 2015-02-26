@@ -61,6 +61,7 @@
     <Compile Include="Trading\DerivedFunds.cs" />
     <Compile Include="Trading\FixAccount.cs" />
     <Compile Include="Trading\BaseFunds.cs" />
+    <Compile Include="Trading\MarginManager.cs" />
     <Compile Include="Trading\Order.cs" />
     <Compile Include="Trading\OrderBook.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

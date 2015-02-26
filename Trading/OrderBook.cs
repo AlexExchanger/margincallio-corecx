@@ -28,5 +28,15 @@ namespace CoreCX.Trading
         {
             BSInsertion.AddSellOrder(ActiveSellOrders, order);
         }
+
+        internal void RemoveBuyOrder(int index)
+        {
+            ActiveBuyOrders.RemoveAt(index);
+        }
+
+        internal void RemoveSellOrder(int index)
+        {
+            ActiveSellOrders.RemoveAt(index);
+        }
     }
 }

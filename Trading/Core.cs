@@ -13,7 +13,7 @@ namespace CoreCX.Trading
         private Dictionary<int, Account> Accounts; //торговые счета "ID юзера -> торговый счёт"
         private Dictionary<int, Account> Debitors; //счета дебиторов (использующих заёмные средства)
         private Dictionary<string, OrderBook> OrderBooks; //словарь "производная валюта -> стакан"	
-        //private Dictionary<long, OrdCancData> OrderCancellationData; //словарь для закрытия заявок
+        private Dictionary<long, OrdCancData> CancelLimitDict; //словарь "ID заявки -> параметры и стакан"
         private Dictionary<string, FixAccount> FixAccounts; //FIX-аккаунты
         private Dictionary<string, ApiKey> ApiKeys; //API-ключи
 
@@ -45,7 +45,8 @@ namespace CoreCX.Trading
         {
             Accounts = new Dictionary<int, Account>(3000);
             Debitors = new Dictionary<int, Account>(1000);
-            OrderBooks = new Dictionary<string, OrderBook>(10);            
+            OrderBooks = new Dictionary<string, OrderBook>(10);
+            CancelLimitDict = new Dictionary<long, OrdCancData>(2000);
             FixAccounts = new Dictionary<string, FixAccount>(500);
             ApiKeys = new Dictionary<string, ApiKey>(500);
 
@@ -146,14 +147,14 @@ namespace CoreCX.Trading
             else return StatusCodes.ErrorAccountNotFound;
         }
 
-        internal StatusCodes DepositFunds(int user_id, string currency, decimal amount) //пополнить торговый счёт //TODO uncomment
+        internal StatusCodes DepositFunds(int user_id, string currency, decimal amount) //пополнить торговый счёт
         {
             //реплицировать
 
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то пополняем
             {
-                //if (amount > 0m) //проверка на положительность суммы пополнения
+                if (amount > 0m) //проверка на положительность суммы пополнения
                 {
                     if (currency == base_currency) //пополнение базовой валюты
                     {
@@ -173,7 +174,7 @@ namespace CoreCX.Trading
                         else return StatusCodes.ErrorCurrencyNotFound;
                     }                    
                 }
-                //else return StatusCodes.ErrorNegativeOrZeroAmount;
+                else return StatusCodes.ErrorNegativeOrZeroAmount;
             }
             else return StatusCodes.ErrorAccountNotFound;
         }
@@ -364,6 +365,77 @@ namespace CoreCX.Trading
             else return StatusCodes.ErrorCurrencyPairNotFound;
         }
 
+        internal StatusCodes CancelLimit(int user_id, long order_id, long func_call_id, int fc_source) //отменить лимитную заявку
+        {
+            //реплицировать
+
+            Account acc;
+            if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то отменяем заявку
+            {
+                if (order_id > 0) //проверка на положительность ID заявки
+                {
+                    OrdCancData ord_canc_data;
+                    if (CancelLimitDict.TryGetValue(order_id, out ord_canc_data))
+                    {
+                        if (!ord_canc_data.Side) //нужно отменить заявку на покупку
+                        {
+                            int buy_index = ord_canc_data.Book.ActiveBuyOrders.FindIndex(i => i.OrderId == order_id);
+                            if (buy_index >= 0) //заявка найдена в стакане на покупку
+                            {
+                                Order buy_order = ord_canc_data.Book.ActiveBuyOrders[buy_index];
+                                if (buy_order.UserId == user_id) //данная заявка принадлежит данному юзеру
+                                {
+                                    ord_canc_data.Book.RemoveBuyOrder(buy_index);
+                                    //Pusher.NewOrder((int)MessageTypes.NewCancelOrder, func_call_id, fc_source, order_kind, order); //сообщение о новой отмене заявки
+                                    acc.BaseCFunds.BlockedFunds -= buy_order.ActualAmount * buy_order.Rate;
+                                    acc.BaseCFunds.AvailableFunds += buy_order.ActualAmount * buy_order.Rate;
+                                    //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                                    CancelLimitDict.Remove(order_id); //удаляем заявку из словаря на закрытие
+
+                                    //if (UpdTicker()) Pusher.NewTicker(bid_buf, ask_buf, DateTime.Now); //сообщение о новом тикере
+                                    //if (UpdActiveBuyTop()) Pusher.NewActiveBuyTop(act_buy_buf, DateTime.Now); //сообщение о новом топе стакана на покупку
+                                    //if (UpdActiveSellTop()) Pusher.NewActiveSellTop(act_sell_buf, DateTime.Now); //сообщение о новом топе стакана на продажу
+
+                                    return StatusCodes.Success;
+                                }
+                                else return StatusCodes.ErrorCrossUserAccessDenied;
+                            }
+                            else return StatusCodes.ErrorOrderNotFound;
+                        }
+                        else //нужно отменить заявку на продажу
+                        {
+                            int sell_index = ord_canc_data.Book.ActiveSellOrders.FindIndex(i => i.OrderId == order_id);
+                            if (sell_index >= 0) //заявка найдена в стакане на продажу
+                            {
+                                Order sell_order = ord_canc_data.Book.ActiveSellOrders[sell_index];
+                                if (sell_order.UserId == user_id) //данная заявка принадлежит данному юзеру
+                                {
+                                    ord_canc_data.Book.RemoveSellOrder(sell_index);
+                                    //Pusher.NewOrder((int)MessageTypes.NewCancelOrder, func_call_id, fc_source, order_kind, order); //сообщение о новой отмене заявки
+                                    DerivedFunds derived_funds = acc.DerivedCFunds[ord_canc_data.DerivedCurrency];
+                                    derived_funds.BlockedFunds -= sell_order.ActualAmount;
+                                    derived_funds.AvailableFunds += sell_order.ActualAmount;
+                                    //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                                    CancelLimitDict.Remove(order_id); //удаляем заявку из словаря на закрытие
+
+                                    //if (UpdTicker()) Pusher.NewTicker(bid_buf, ask_buf, DateTime.Now); //сообщение о новом тикере
+                                    //if (UpdActiveBuyTop()) Pusher.NewActiveBuyTop(act_buy_buf, DateTime.Now); //сообщение о новом топе стакана на покупку
+                                    //if (UpdActiveSellTop()) Pusher.NewActiveSellTop(act_sell_buf, DateTime.Now); //сообщение о новом топе стакана на продажу
+
+                                    return StatusCodes.Success;
+                                }
+                                else return StatusCodes.ErrorCrossUserAccessDenied;
+                            }
+                            else return StatusCodes.ErrorOrderNotFound;
+                        }
+                    }
+                    else return StatusCodes.ErrorOrderNotFound;
+                }
+                else return StatusCodes.ErrorNegativeOrZeroId;
+            }
+            else return StatusCodes.ErrorAccountNotFound;
+        }
+
 
 
 
@@ -523,6 +595,7 @@ namespace CoreCX.Trading
                         //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
                         Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
                         book.InsertBuyOrder(order);
+                        if (!CancelLimitDict.ContainsKey(order.OrderId)) CancelLimitDict.Add(order.OrderId, new OrdCancData(derived_currency, book, side)); //добавление заявки в словарь на закрытие
                         //Pusher.NewOrder(msg_type, func_call_id, fc_source, side, order); //сообщение о новой заявке
                         //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
                         //if (fc_source == (int)FCSources.FixApi) FixMessager.NewExecutionReport(external_data, func_call_id, side, order); //FIX-сообщение о новой заявке
@@ -541,6 +614,7 @@ namespace CoreCX.Trading
                             //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
                             Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
                             book.InsertBuyOrder(order);
+                            if (!CancelLimitDict.ContainsKey(order.OrderId)) CancelLimitDict.Add(order.OrderId, new OrdCancData(derived_currency, book, side)); //добавление заявки в словарь на закрытие
                             //Pusher.NewOrder(msg_type, func_call_id, fc_source, side, order); //сообщение о новой заявке
                             //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
                             //if (fc_source == (int)FCSources.FixApi) FixMessager.NewExecutionReport(external_data, func_call_id, side, order); //FIX-сообщение о новой заявке
@@ -560,6 +634,7 @@ namespace CoreCX.Trading
                         //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
                         Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
                         book.InsertSellOrder(order);
+                        if (!CancelLimitDict.ContainsKey(order.OrderId)) CancelLimitDict.Add(order.OrderId, new OrdCancData(derived_currency, book, side)); //добавление заявки в словарь на закрытие
                         //Pusher.NewOrder(msg_type, func_call_id, fc_source, side, order); //сообщение о новой заявке
                         //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
                         //if (fc_source == (int)FCSources.FixApi) FixMessager.NewExecutionReport(external_data, func_call_id, side, order); //FIX-сообщение о новой заявке
@@ -578,6 +653,7 @@ namespace CoreCX.Trading
                             //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
                             Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
                             book.InsertSellOrder(order);
+                            if (!CancelLimitDict.ContainsKey(order.OrderId)) CancelLimitDict.Add(order.OrderId, new OrdCancData(derived_currency, book, side)); //добавление заявки в словарь на закрытие
                             //Pusher.NewOrder(msg_type, func_call_id, fc_source, side, order); //сообщение о новой заявке
                             //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
                             //if (fc_source == (int)FCSources.FixApi) FixMessager.NewExecutionReport(external_data, func_call_id, side, order); //FIX-сообщение о новой заявке
@@ -661,9 +737,12 @@ namespace CoreCX.Trading
                     //FIX-сообщения о новых сделках
                     //if (buy_ord.FCSource == (int)FCSources.FixApi) FixMessager.NewExecutionReport(buy_ord.ExternalData, false, buy_ord, trade);
                     //if (sell_ord.FCSource == (int)FCSources.FixApi) FixMessager.NewExecutionReport(sell_ord.ExternalData, true, sell_ord, trade);
-
+                                        
                     //т.к. объём buy-заявки больше, sell-заявка удаляется из списка активных заявок
                     book.ActiveSellOrders.RemoveAt(book.ActiveSellOrders.Count - 1);
+
+                    //удаление ID заявки из словаря на закрытие
+                    if (CancelLimitDict.ContainsKey(sell_ord.OrderId)) CancelLimitDict.Remove(sell_ord.OrderId);
                 }
                 else if (buy_ord.ActualAmount < sell_ord.ActualAmount) //2-ой вариант - объём sell-заявки больше
                 {
@@ -699,6 +778,9 @@ namespace CoreCX.Trading
 
                     //т.к. объём sell-заявки больше, buy-заявка удаляется из списка активных заявок
                     book.ActiveBuyOrders.RemoveAt(book.ActiveBuyOrders.Count - 1);
+
+                    //удаление ID заявки из словаря на закрытие
+                    if (CancelLimitDict.ContainsKey(buy_ord.OrderId)) CancelLimitDict.Remove(buy_ord.OrderId);
                 }
                 else if (buy_ord.ActualAmount == sell_ord.ActualAmount) //3-ий вариант - объёмы заявок равны
                 {
@@ -735,6 +817,10 @@ namespace CoreCX.Trading
                     //т.к. объёмы заявок равны, обе заявки удаляются из списка активных заявок
                     book.ActiveBuyOrders.RemoveAt(book.ActiveBuyOrders.Count - 1);
                     book.ActiveSellOrders.RemoveAt(book.ActiveSellOrders.Count - 1);
+
+                    //удаление ID заявок из словаря на закрытие
+                    if (CancelLimitDict.ContainsKey(buy_ord.OrderId)) CancelLimitDict.Remove(buy_ord.OrderId);
+                    if (CancelLimitDict.ContainsKey(sell_ord.OrderId)) CancelLimitDict.Remove(sell_ord.OrderId);
                 }
 
                 //если все заявки в стакане (стаканах) были удалены - выходим из цикла
