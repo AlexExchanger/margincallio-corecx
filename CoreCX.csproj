@@ -72,7 +72,8 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Gateways\" />
+    <Folder Include="Gateways\FIX\" />
+    <Folder Include="Gateways\TCP\" />
     <Folder Include="Recovery\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

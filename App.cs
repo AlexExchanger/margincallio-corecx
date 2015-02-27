@@ -32,12 +32,12 @@ namespace CoreCX
             Console.WriteLine(core.DepositFunds(2, "ltc", 10m));
             Console.WriteLine();
 
-            Console.WriteLine(core.PlaceLimit(1, "btc", false, 50m, 300m, 12L, 2));
-            Console.WriteLine(core.PlaceLimit(1, "btc", true, 50m, 310m, 13L, 2));
-            Console.WriteLine(core.PlaceLimit(1, "ltc", false, 250m, 10m, 16L, 2));
-            Console.WriteLine(core.PlaceLimit(1, "ltc", true, 250m, 11m, 17L, 2));
+            Console.WriteLine(core.PlaceLimit(1, "btc", false, 50m, 300m, 0m, 0m, 12L, 2));
+            Console.WriteLine(core.PlaceLimit(1, "btc", true, 50m, 310m, 0m, 0m, 13L, 2));
+            Console.WriteLine(core.PlaceLimit(1, "ltc", false, 250m, 10m, 0m, 0m, 16L, 2));
+            Console.WriteLine(core.PlaceLimit(1, "ltc", true, 250m, 11m, 0m, 0m, 17L, 2));
 
-            Console.WriteLine(core.PlaceLimit(2, "btc", true, 0.5m, 305m, 18L, 2));
+            Console.WriteLine(core.PlaceLimit(2, "btc", true, 0.5m, 305m, 0m, 0m, 18L, 2));
             Console.WriteLine(core.CancelLimit(2, 5, 19L, 2));
             core.ManageMargin();
 
@@ -47,7 +47,7 @@ namespace CoreCX
             //Console.WriteLine(core.PlaceLimit(1, "btc", true, 100m, 242m, 13L, 2));
             core.ManageMargin();
 
-            Console.WriteLine(core.PlaceMarket(2, "ltc", false, true, 114m, 18L, 2));
+            Console.WriteLine(core.PlaceMarket(2, "ltc", false, true, 114m, 0m, 0m, 18L, 2));
             core.ManageMargin();
 
             proc.Start(); //старт исполнения функций из очередей в Main Thread

@@ -128,11 +128,11 @@ namespace CoreCX
         ErrorOrderNotFound = 9,
         ErrorInsufficientMarketVolume = 10,
         ErrorBorrowedFundsUse = 11,
-        ErrorNegativeOrZeroAmount = 12,
+        ErrorNegativeOrZeroValue = 12,
         ErrorNegativeOrZeroId = 13,
         ErrorApiKeyNotPrivileged = 14,
-        ErrorIncorrectPositionType = 15,
-        ErrorIncorrectRate = 16,
+        ErrorIncorrectStopLossRate = 15,
+        ErrorIncorrectTakeProfitRate = 16,
         ErrorApiKeysLimitReached = 17,
         ErrorApiKeyNotFound = 18,
         ErrorSignatureDuplicate = 19,
@@ -166,6 +166,8 @@ namespace CoreCX
         ErrorCurrencyNotFound = 47,
         ErrorCurrencyPairNotFound = 48, 
         ErrorCurrencyPairAlreadyExists = 49,
+        ErrorStopLossUnavailable = 50,
+        ErrorTakeProfitUnavailable = 51,
         
 
         Unknown = 99
@@ -203,9 +205,10 @@ namespace CoreCX
 
     internal enum FCSources
     {
-        WebApp = 0,
-        HttpApi = 1,
-        FixApi = 2
+        Core = 0,
+        WebApp = 1,
+        HttpApi = 2,
+        FixApi = 3
     }
 
     internal enum FCRejCodes

@@ -11,41 +11,35 @@ namespace CoreCX.Trading
         internal decimal OriginalAmount { get; private set; }
         internal decimal ActualAmount { get; set; } //текущий объём заявки может изменяться
         internal decimal Rate { get; private set; }
-        internal int FCSource { get; private set; }
-        internal string ExternalData { get; private set; }
+        internal Order StopLoss { get; set; } //указатель на SL-заявку, который назначается после создания основной заявки
+        internal Order TakeProfit { get; set; } //указатель на TP-заявку, который назначается после создания основной заявки
+        internal int FCSource { get; private set; }        
+        internal string ExternalData { get; private set; }        
         internal DateTime DtMade { get; private set; }
-
-        internal Order() //конструктор заявки по умолчанию
-        {
-            OrderId = 0L;
-            UserId = 0;
-            OriginalAmount = 0m;
-            ActualAmount = 0m;
-            Rate = 0m;
-            FCSource = 0;
-            ExternalData = "";
-            DtMade = new DateTime();
-        }
-
-        internal Order(int user_id, decimal original_amount, decimal actual_amount, decimal rate) //конструктор заявки
+        
+        internal Order(int user_id, decimal original_amount, decimal actual_amount, decimal rate) //конструктор FL-заявки
         {
             OrderId = ++next_id; //инкремент id предыдущей заявки
             UserId = user_id;
             OriginalAmount = original_amount;
             ActualAmount = actual_amount;
             Rate = rate;
-            FCSource = 0;
-            ExternalData = "";
+            StopLoss = null;
+            TakeProfit = null;
+            FCSource = (int)FCSources.Core;            
+            ExternalData = null;            
             DtMade = DateTime.Now;
         }
 
-        internal Order(int user_id, decimal original_amount, decimal actual_amount, decimal rate, int fc_source, string external_data) //конструктор заявки с внешними данными
+        internal Order(int user_id, decimal original_amount, decimal actual_amount, decimal rate, int fc_source, string external_data) //конструктор заявки
         {
             OrderId = ++next_id; //инкремент id предыдущей заявки
             UserId = user_id;
             OriginalAmount = original_amount;
             ActualAmount = actual_amount;
             Rate = rate;
+            StopLoss = null;
+            TakeProfit = null;
             FCSource = fc_source;
             ExternalData = external_data;
             DtMade = DateTime.Now;
