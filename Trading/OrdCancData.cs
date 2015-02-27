@@ -8,12 +8,14 @@ namespace CoreCX.Trading
     {
         internal string DerivedCurrency { get; private set; }
         internal OrderBook Book { get; private set; }
+        internal CancOrdTypes OrderType { get; private set; }
         internal bool Side { get; private set; }
 
-        internal OrdCancData(string derived_currency, OrderBook book, bool side)
+        internal OrdCancData(string derived_currency, OrderBook book, CancOrdTypes order_type, bool side)
         {
             DerivedCurrency = derived_currency;            
             Book = book;
+            OrderType = order_type;
             Side = side;
         }
     }

@@ -32,17 +32,7 @@ namespace CoreCX.Trading
         {
             BSInsertion.AddSellOrder(ActiveSellOrders, order);
         }
-
-        internal void RemoveBuyOrder(int index)
-        {
-            ActiveBuyOrders.RemoveAt(index);
-        }
-
-        internal void RemoveSellOrder(int index)
-        {
-            ActiveSellOrders.RemoveAt(index);
-        }
-
+               
         internal void InsertBuySL(Order order)
         {
             BSInsertion.AddSellOrder(BuySLs, order);
@@ -61,6 +51,35 @@ namespace CoreCX.Trading
         internal void InsertSellTP(Order order)
         {
             BSInsertion.AddSellOrder(SellTPs, order);
+        }
+
+        internal void RemoveBuyOrder(int index)
+        {
+            ActiveBuyOrders.RemoveAt(index);
+        }
+
+        internal void RemoveSellOrder(int index)
+        {
+            ActiveSellOrders.RemoveAt(index);
+        }
+
+        internal void RemoveBuySL(int index)
+        {
+            BuySLs.RemoveAt(index);
+        }
+
+        internal void RemoveSellSL(int index)
+        {
+            SellSLs.RemoveAt(index);
+        }
+        internal void RemoveBuyTP(int index)
+        {
+            BuyTPs.RemoveAt(index);
+        }
+
+        internal void RemoveSellTP(int index)
+        {
+            SellTPs.RemoveAt(index);
         }
     }
 }

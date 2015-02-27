@@ -219,12 +219,13 @@ namespace CoreCX
         BackupRestoreInProc = 3
     }
 
-    internal enum OrdTypes
+    internal enum CancOrdTypes
     {
         Limit = 0,
         Market = 1,
-        StopMarket = 2,
-        StopLimit = 3
+        StopLoss = 2,
+        TakeProfit = 3,
+        TrailingStop = 4
     }
 
     internal enum OrdExecStatuses
