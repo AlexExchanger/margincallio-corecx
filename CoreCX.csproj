@@ -65,7 +65,7 @@
     <Compile Include="Trading\Order.cs" />
     <Compile Include="Trading\OrderBook.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Trading\OrdCancData.cs" />
+    <Compile Include="Trading\CancOrdData.cs" />
     <Compile Include="Trading\Trade.cs" />
   </ItemGroup>
   <ItemGroup>
