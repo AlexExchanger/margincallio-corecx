@@ -19,7 +19,11 @@ namespace CoreCX.Trading
             if (top_buy_order.Rate.CompareTo(new_buy_order.Rate) <= 0)
             {
                 orders.Add(new_buy_order);
-                if (new_buy_order.Rate / top_buy_order.Rate - 1m > manage_margin_rate_deviation) MarginManager.QueueManageMarginExecution();
+                if (new_buy_order.Rate / top_buy_order.Rate - 1m > manage_margin_rate_deviation)
+                {
+                    MarginManager.QueueManageMarginExecution();
+                    CondOrdManager.QueueManageConditionalOrdersExecution();
+                }
                 return;
             }
 
@@ -48,7 +52,11 @@ namespace CoreCX.Trading
             if (top_sell_order.Rate.CompareTo(new_sell_order.Rate) >= 0)
             {
                 orders.Add(new_sell_order);
-                if (1m - new_sell_order.Rate / top_sell_order.Rate > manage_margin_rate_deviation) MarginManager.QueueManageMarginExecution();
+                if (1m - new_sell_order.Rate / top_sell_order.Rate > manage_margin_rate_deviation)
+                {
+                    MarginManager.QueueManageMarginExecution();
+                    CondOrdManager.QueueManageConditionalOrdersExecution();
+                }
                 return;
             }
 

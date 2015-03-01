@@ -14,7 +14,6 @@ namespace CoreCX.Trading
         private Dictionary<int, Account> Debitors; //счета дебиторов (использующих заёмные средства)
         private Dictionary<string, OrderBook> OrderBooks; //словарь "производная валюта -> стакан"	
         private Dictionary<long, CancOrdData> CancelOrderDict; //словарь "ID заявки -> параметры и стакан"
-
         private Dictionary<string, FixAccount> FixAccounts; //FIX-аккаунты
         private Dictionary<string, ApiKey> ApiKeys; //API-ключи
 
@@ -1296,24 +1295,27 @@ namespace CoreCX.Trading
             foreach (KeyValuePair<string, OrderBook> book in OrderBooks)
             {
                 ManageSLs(book.Key, book.Value);
-                //ManageTPs(book.Key, book.Value);
+                ManageTPs(book.Key, book.Value);
                 //ManageTSs(book.Key, book.Value);
             }
         }
 
-        internal void ManageSLs(string derived_currency, OrderBook book)
+        private void ManageSLs(string derived_currency, OrderBook book)
         {
             //реплицировать
 
-            //проверяем условия SL для лонгов
+            //проверяем условия SL на продажу
             for (int i = book.SellSLs.Count - 1; i >= 0; i--)
             {
                 if (book.ActiveBuyOrders.Count > 0)
                 {
                     Order sell_sl = book.SellSLs[i];
-                    if (book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1].Rate <= sell_sl.Rate) //сравнение с рыночным курсом на покупку (стоп-лосс будет на продажу)
+                    if (book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1].Rate <= sell_sl.Rate) //сравнение с рыночным курсом на покупку (SL будет на продажу)
                     {
                         //создаём рыночную заявку на продажу по рынку
+                        Account acc = Accounts[sell_sl.UserId];
+                        DerivedFunds derived_funds = acc.DerivedCFunds[derived_currency];
+
                         //калькуляция rate для немедленного исполнения по рынку
                         decimal market_rate = 0m;
                         decimal accumulated_amount = 0m;
@@ -1328,20 +1330,20 @@ namespace CoreCX.Trading
                         }
 
                         if (market_rate == 0) continue;
-
-                        Account acc = Accounts[sell_sl.UserId];
-                        DerivedFunds derived_funds = acc.DerivedCFunds[derived_currency];
-                        if (acc.AvailableFunds1 >= sell_sl.ActualAmount) //проверка на платежеспособность по currency1
+                                                
+                        if (derived_funds.AvailableFunds >= sell_sl.ActualAmount) //проверка на платежеспособность по производной валюте
                         {
-                            acc.AvailableFunds1 -= sell_sl.ActualAmount; //снимаем средства с доступных средств
-                            acc.BlockedFunds1 += sell_sl.ActualAmount; //блокируем средства в заявке на продажу
-                            Pusher.NewBalance(sell_sl.UserId, acc, DateTime.Now); //сообщение о новом балансе
-                            Order new_sell_order = new Order(sell_sl.UserId, sell_sl.ActualAmount, sell_sl.ActualAmount, market_rate, sell_sl.FCSource, sell_sl.ExternalData);
+                            derived_funds.AvailableFunds -= sell_sl.ActualAmount; //снимаем средства с доступных средств
+                            derived_funds.BlockedFunds += sell_sl.ActualAmount; //блокируем средства в заявке на продажу
+                            //Pusher.NewBalance(sell_sl.UserId, acc, DateTime.Now); //сообщение о новом балансе
+                                                        
                             book.SellSLs.RemoveAt(i); //удаляем SL из памяти
-                            BSInsertion.AddSellOrder(ref ActiveSellOrders, new_sell_order);
-                            Pusher.NewOrder((int)MessageTypes.NewExecSL, true, new_sell_order); //сообщение о срабатывании SL
+                            sell_sl.Rate = market_rate; //присвоение рыночной цены
+                            book.InsertSellOrder(sell_sl);
+                            //Pusher.NewOrder((int)MessageTypes.NewExecSL, true, new_sell_order); //сообщение о срабатывании SL
                             //FixMessager.NewMarketDataIncrementalRefresh(true, new_sell_order); //FIX multicast
-                            Match(); //мэтчинг SL-заявки
+
+                            Match(derived_currency, book);
                         }
                         else
                         {
@@ -1352,47 +1354,157 @@ namespace CoreCX.Trading
                 }
             }
 
-            //проверяем условия SL для шортов
-            for (int i = ShortSLs.Count - 1; i >= 0; i--)
+            //проверяем условия SL на покупку
+            for (int i = book.BuySLs.Count - 1; i >= 0; i--)
             {
-                if (ActiveSellOrders.Count > 0)
+                if (book.ActiveSellOrders.Count > 0)
                 {
-                    Order short_sl = ShortSLs[i];
-                    if (ActiveSellOrders[ActiveSellOrders.Count - 1].Rate >= short_sl.Rate) //сравнение с рыночным курсом на продажу (стоп-лосс будет на покупку)
+                    Order buy_sl = book.BuySLs[i];
+                    if (book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate >= buy_sl.Rate) //сравнение с рыночным курсом на продажу (стоп-лосс будет на покупку)
                     {
                         //создаём рыночную заявку на покупку по рынку
+                        Account acc = Accounts[buy_sl.UserId];
+                        buy_sl.ActualAmount = buy_sl.ActualAmount / (1m - acc.DerivedCFunds[derived_currency].Fee); //поправка на списание комиссии
+
                         //калькуляция rate для немедленного исполнения по рынку
                         decimal market_rate = 0m;
                         decimal accumulated_amount = 0m;
-                        for (int j = ActiveSellOrders.Count - 1; j >= 0; j--)
+                        for (int j = book.ActiveSellOrders.Count - 1; j >= 0; j--)
                         {
-                            accumulated_amount += ActiveSellOrders[j].ActualAmount;
-                            if (accumulated_amount >= short_sl.ActualAmount) //если объём накопленных заявок на продажу покрывает объём заявки на покупку
+                            accumulated_amount += book.ActiveSellOrders[j].ActualAmount;
+                            if (accumulated_amount >= buy_sl.ActualAmount) //если объём накопленных заявок на продажу покрывает объём заявки на покупку
                             {
-                                market_rate = ActiveSellOrders[j].Rate;
+                                market_rate = book.ActiveSellOrders[j].Rate;
                                 break;
                             }
                         }
 
                         if (market_rate == 0) continue;
 
-                        Account acc = Accounts[short_sl.UserId];
-                        decimal amount = short_sl.ActualAmount / (1m - acc.Fee);
-                        if (acc.AvailableFunds2 >= amount * market_rate) //проверка на платежеспособность по currency2
+                        decimal total = buy_sl.ActualAmount * market_rate;
+                        if (acc.BaseCFunds.AvailableFunds >= total) //проверка на платежеспособность по базовой валюте
                         {
-                            acc.AvailableFunds2 -= amount * market_rate; //снимаем средства с доступных средств
-                            acc.BlockedFunds2 += amount * market_rate; //блокируем средства в заявке на продажу
-                            Pusher.NewBalance(short_sl.UserId, acc, DateTime.Now); //сообщение о новом балансе
-                            Order new_buy_order = new Order(short_sl.UserId, amount, amount, market_rate, short_sl.FCSource, short_sl.ExternalData);
-                            ShortSLs.RemoveAt(i); //удаляем SL из памяти
-                            BSInsertion.AddBuyOrder(ref ActiveBuyOrders, new_buy_order);
-                            Pusher.NewOrder((int)MessageTypes.NewExecSL, false, new_buy_order); //сообщение о срабатывании SL
+                            acc.BaseCFunds.AvailableFunds -= total; //снимаем средства с доступных средств
+                            acc.BaseCFunds.BlockedFunds += total; //блокируем средства в заявке на продажу
+                            //Pusher.NewBalance(buy_sl.UserId, acc, DateTime.Now); //сообщение о новом балансе
+
+                            book.BuySLs.RemoveAt(i); //удаляем SL из памяти
+                            buy_sl.Rate = market_rate;
+                            book.InsertBuyOrder(buy_sl);
+                            //Pusher.NewOrder((int)MessageTypes.NewExecSL, false, new_buy_order); //сообщение о срабатывании SL
                             //FixMessager.NewMarketDataIncrementalRefresh(false, new_buy_order); //FIX multicast
-                            Match(); //мэтчинг SL-заявки
+
+                            Match(derived_currency, book);
                         }
                         else
                         {
-                            ShortSLs.RemoveAt(i); //удаляем SL из памяти 
+                            book.BuySLs.RemoveAt(i); //удаляем SL из памяти 
+                        }
+                    }
+                    else break;
+                }
+            }
+        }
+
+        private void ManageTPs(string derived_currency, OrderBook book)
+        {
+            //реплицировать
+
+            //проверяем условия TP на продажу
+            for (int i = book.SellTPs.Count - 1; i >= 0; i--)
+            {
+                if (book.ActiveBuyOrders.Count > 0)
+                {
+                    Order sell_tp = book.SellTPs[i];
+                    if (book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1].Rate >= sell_tp.Rate) //сравнение с рыночным курсом на покупку (TP будет на продажу)
+                    {
+                        //создаём рыночную заявку на продажу по рынку
+                        Account acc = Accounts[sell_tp.UserId];
+                        DerivedFunds derived_funds = acc.DerivedCFunds[derived_currency];
+
+                        //калькуляция rate для немедленного исполнения по рынку
+                        decimal market_rate = 0m;
+                        decimal accumulated_amount = 0m;
+                        for (int j = book.ActiveBuyOrders.Count - 1; j >= 0; j--)
+                        {
+                            accumulated_amount += book.ActiveBuyOrders[j].ActualAmount;
+                            if (accumulated_amount >= sell_tp.ActualAmount) //если объём накопленных заявок на покупку покрывает объём заявки на продажу
+                            {
+                                market_rate = book.ActiveBuyOrders[j].Rate;
+                                break;
+                            }
+                        }
+
+                        if (market_rate == 0) continue;
+
+                        if (derived_funds.AvailableFunds >= sell_tp.ActualAmount) //проверка на платежеспособность по производной валюте
+                        {
+                            derived_funds.AvailableFunds -= sell_tp.ActualAmount; //снимаем средства с доступных средств
+                            derived_funds.BlockedFunds += sell_tp.ActualAmount; //блокируем средства в заявке на продажу
+                            //Pusher.NewBalance(sell_tp.UserId, acc, DateTime.Now); //сообщение о новом балансе
+
+                            book.SellTPs.RemoveAt(i); //удаляем TP из памяти
+                            sell_tp.Rate = market_rate; //присвоение рыночной цены
+                            book.InsertSellOrder(sell_tp);
+                            //Pusher.NewOrder((int)MessageTypes.NewExecTP, true, new_sell_order); //сообщение о срабатывании TP
+                            //FixMessager.NewMarketDataIncrementalRefresh(true, new_sell_order); //FIX multicast
+
+                            Match(derived_currency, book);
+                        }
+                        else
+                        {
+                            book.SellTPs.RemoveAt(i); //удаляем TP из памяти 
+                        }
+                    }
+                    else break;
+                }
+            }
+
+            //проверяем условия TP на покупку
+            for (int i = book.BuyTPs.Count - 1; i >= 0; i--)
+            {
+                if (book.ActiveSellOrders.Count > 0)
+                {
+                    Order buy_tp = book.BuyTPs[i];
+                    if (book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate <= buy_tp.Rate) //сравнение с рыночным курсом на продажу (стоп-лосс будет на покупку)
+                    {
+                        //создаём рыночную заявку на покупку по рынку
+                        Account acc = Accounts[buy_tp.UserId];
+                        buy_tp.ActualAmount = buy_tp.ActualAmount / (1m - acc.DerivedCFunds[derived_currency].Fee); //поправка на списание комиссии
+
+                        //калькуляция rate для немедленного исполнения по рынку
+                        decimal market_rate = 0m;
+                        decimal accumulated_amount = 0m;
+                        for (int j = book.ActiveSellOrders.Count - 1; j >= 0; j--)
+                        {
+                            accumulated_amount += book.ActiveSellOrders[j].ActualAmount;
+                            if (accumulated_amount >= buy_tp.ActualAmount) //если объём накопленных заявок на продажу покрывает объём заявки на покупку
+                            {
+                                market_rate = book.ActiveSellOrders[j].Rate;
+                                break;
+                            }
+                        }
+
+                        if (market_rate == 0) continue;
+
+                        decimal total = buy_tp.ActualAmount * market_rate;
+                        if (acc.BaseCFunds.AvailableFunds >= total) //проверка на платежеспособность по базовой валюте
+                        {
+                            acc.BaseCFunds.AvailableFunds -= total; //снимаем средства с доступных средств
+                            acc.BaseCFunds.BlockedFunds += total; //блокируем средства в заявке на продажу
+                            //Pusher.NewBalance(buy_tp.UserId, acc, DateTime.Now); //сообщение о новом балансе
+
+                            book.BuyTPs.RemoveAt(i); //удаляем TP из памяти
+                            buy_tp.Rate = market_rate;
+                            book.InsertBuyOrder(buy_tp);
+                            //Pusher.NewOrder((int)MessageTypes.NewExecTP, false, new_buy_order); //сообщение о срабатывании TP
+                            //FixMessager.NewMarketDataIncrementalRefresh(false, new_buy_order); //FIX multicast
+
+                            Match(derived_currency, book);
+                        }
+                        else
+                        {
+                            book.BuyTPs.RemoveAt(i); //удаляем TP из памяти 
                         }
                     }
                     else break;

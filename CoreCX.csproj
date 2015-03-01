@@ -57,6 +57,7 @@
     <Compile Include="App.cs" />
     <Compile Include="Trading\ApiKey.cs" />
     <Compile Include="Trading\BSInsertion.cs" />
+    <Compile Include="Trading\CondOrdManager.cs" />
     <Compile Include="Trading\Core.cs" />
     <Compile Include="Trading\DerivedFunds.cs" />
     <Compile Include="Trading\FixAccount.cs" />

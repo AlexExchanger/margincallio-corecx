@@ -10,7 +10,7 @@ namespace CoreCX.Trading
         internal int UserId { get; private set; }
         internal decimal OriginalAmount { get; private set; }
         internal decimal ActualAmount { get; set; } //текущий объём заявки может изменяться
-        internal decimal Rate { get; private set; }
+        internal decimal Rate { get; set; } //цена изменяется при срабатывании условной заявки
         internal Order StopLoss { get; set; } //указатель на SL-заявку, который назначается после создания основной заявки
         internal Order TakeProfit { get; set; } //указатель на TP-заявку, который назначается после создания основной заявки
         internal int FCSource { get; private set; }        
