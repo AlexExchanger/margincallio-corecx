@@ -12,6 +12,8 @@ namespace CoreCX.Trading
         internal List<Order> SellSLs { get; set; } //TODO inheritance
         internal List<Order> BuyTPs { get; set; } //TODO inheritance
         internal List<Order> SellTPs { get; set; } //TODO inheritance
+        internal List<TSOrder> BuyTSs { get; set; }
+        internal List<TSOrder> SellTSs { get; set; }
 
         internal OrderBook()
         {
@@ -53,6 +55,16 @@ namespace CoreCX.Trading
             BSInsertion.AddSellOrder(SellTPs, order);
         }
 
+        internal void InsertBuyTS(TSOrder ts_order)
+        {
+            BuyTSs.Add(ts_order);
+        }
+
+        internal void InsertSellTS(TSOrder ts_order)
+        {
+            SellTSs.Add(ts_order);
+        }
+
         internal void RemoveBuyOrder(int index)
         {
             ActiveBuyOrders.RemoveAt(index);
@@ -72,6 +84,7 @@ namespace CoreCX.Trading
         {
             SellSLs.RemoveAt(index);
         }
+
         internal void RemoveBuyTP(int index)
         {
             BuyTPs.RemoveAt(index);
@@ -80,6 +93,16 @@ namespace CoreCX.Trading
         internal void RemoveSellTP(int index)
         {
             SellTPs.RemoveAt(index);
+        }
+
+        internal void RemoveBuyTS(int index)
+        {
+            BuyTSs.RemoveAt(index);
+        }
+
+        internal void RemoveSellTS(int index)
+        {
+            SellTSs.RemoveAt(index);
         }
     }
 }

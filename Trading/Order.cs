@@ -13,7 +13,8 @@ namespace CoreCX.Trading
         internal decimal Rate { get; set; } //цена изменяется при срабатывании условной заявки
         internal Order StopLoss { get; set; } //указатель на SL-заявку, который назначается после создания основной заявки
         internal Order TakeProfit { get; set; } //указатель на TP-заявку, который назначается после создания основной заявки
-        internal int FCSource { get; private set; }        
+        internal TSOrder TrailingStop { get; set; } //указатель на TS-заявку, который назначается после создания основной заявки
+        internal FCSources FCSource { get; private set; }        
         internal string ExternalData { get; private set; }        
         internal DateTime DtMade { get; private set; }
         
@@ -26,12 +27,13 @@ namespace CoreCX.Trading
             Rate = rate;
             StopLoss = null;
             TakeProfit = null;
-            FCSource = (int)FCSources.Core;            
+            TrailingStop = null;
+            FCSource = FCSources.Core;            
             ExternalData = null;            
             DtMade = DateTime.Now;
         }
 
-        internal Order(int user_id, decimal original_amount, decimal actual_amount, decimal rate, int fc_source, string external_data) //конструктор заявки
+        internal Order(int user_id, decimal original_amount, decimal actual_amount, decimal rate, FCSources fc_source, string external_data) //конструктор заявки
         {
             OrderId = ++next_id; //инкремент id предыдущей заявки
             UserId = user_id;
@@ -40,6 +42,7 @@ namespace CoreCX.Trading
             Rate = rate;
             StopLoss = null;
             TakeProfit = null;
+            TrailingStop = null;
             FCSource = fc_source;
             ExternalData = external_data;
             DtMade = DateTime.Now;

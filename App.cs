@@ -32,16 +32,16 @@ namespace CoreCX
             Console.WriteLine(core.DepositFunds(2, "ltc", 10m));
             Console.WriteLine();
 
-            Console.WriteLine(core.PlaceLimit(1, "btc", false, 50m, 300m, 0m, 0m, 12L, 2));
-            Console.WriteLine(core.PlaceLimit(1, "btc", true, 50m, 310m, 0m, 0m, 13L, 2));
-            Console.WriteLine(core.PlaceLimit(1, "ltc", false, 250m, 10m, 0m, 0m, 16L, 2));
-            Console.WriteLine(core.PlaceLimit(1, "ltc", true, 250m, 11m, 0m, 0m, 17L, 2));
+            //Console.WriteLine(core.PlaceLimit(1, "btc", false, 50m, 300m, 0m, 0m, 0m, 12L, FCSources.Core));
+            //Console.WriteLine(core.PlaceLimit(1, "btc", true, 50m, 310m, 0m, 0m, 0m, 13L, FCSources.Core));
+            //Console.WriteLine(core.PlaceLimit(1, "ltc", false, 250m, 10m, 0m, 0m, 0m, 16L, FCSources.Core));
+            //Console.WriteLine(core.PlaceLimit(1, "ltc", true, 250m, 11m, 0m, 0m, 0m, 17L, FCSources.Core));
 
-            Console.WriteLine(core.PlaceMarket(2, "btc", true, false, 3m, 320m, 290m, 18L, 2));
-            Console.WriteLine(core.CancelOrder(2, 5, 19L, 2));
+            //Console.WriteLine(core.PlaceMarket(2, "btc", true, false, 3m, 320m, 290m, 0m, 18L, FCSources.Core));
+            //Console.WriteLine(core.CancelOrder(2, 5, 19L, FCSources.Core));
 
-            Console.WriteLine(core.PlaceLimit(1, "btc", false, 150m, 320m, 0m, 0m, 19L, 2));
-            Console.WriteLine(core.PlaceLimit(1, "btc", true, 150m, 325m, 0m, 0m, 19L, 2));
+            //Console.WriteLine(core.PlaceLimit(1, "btc", false, 150m, 320m, 0m, 0m, 0m, 19L, FCSources.Core));
+            //Console.WriteLine(core.PlaceLimit(1, "btc", true, 150m, 325m, 0m, 0m, 0m, 19L, FCSources.Core));
 
             //core.ManageMargin();
 

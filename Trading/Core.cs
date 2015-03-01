@@ -246,19 +246,19 @@ namespace CoreCX.Trading
             else return StatusCodes.ErrorAccountNotFound;
         }
         
-        internal StatusCodes PlaceLimit(int user_id, string derived_currency, bool side, decimal amount, decimal rate, decimal sl_rate, decimal tp_rate, long func_call_id, int fc_source, string external_data = null) //подать лимитную заявку
+        internal StatusCodes PlaceLimit(int user_id, string derived_currency, bool side, decimal amount, decimal rate, decimal sl_rate, decimal tp_rate, decimal ts_offset, long func_call_id, FCSources fc_source, string external_data = null) //подать лимитную заявку
         {
             //реплицировать
 
             OrderBook book;
             if (OrderBooks.TryGetValue(derived_currency, out book)) //проверка на существование стакана
             {
-                return BaseLimit(user_id, derived_currency, book, side, amount, rate, sl_rate, tp_rate, (int)MessageTypes.NewPlaceLimit, func_call_id, fc_source, external_data);
+                return BaseLimit(user_id, derived_currency, book, side, amount, rate, sl_rate, tp_rate, ts_offset, MessageTypes.NewPlaceLimit, func_call_id, fc_source, external_data);
             }
             else return StatusCodes.ErrorCurrencyPairNotFound;           
         }
 
-        internal StatusCodes PlaceMarket(int user_id, string derived_currency, bool side, bool base_amount, decimal amount, decimal sl_rate, decimal tp_rate, long func_call_id, int fc_source, string external_data = null) //подать рыночную заявку
+        internal StatusCodes PlaceMarket(int user_id, string derived_currency, bool side, bool base_amount, decimal amount, decimal sl_rate, decimal tp_rate, decimal ts_offset, long func_call_id, FCSources fc_source, string external_data = null) //подать рыночную заявку
         {
             //реплицировать
 
@@ -284,7 +284,7 @@ namespace CoreCX.Trading
 
                         if (market_rate == 0m) return StatusCodes.ErrorInsufficientMarketVolume;
 
-                        return BaseLimit(user_id, derived_currency, book, side, amount, market_rate, sl_rate, tp_rate, (int)MessageTypes.NewPlaceMarket, func_call_id, fc_source, external_data);
+                        return BaseLimit(user_id, derived_currency, book, side, amount, market_rate, sl_rate, tp_rate, ts_offset, MessageTypes.NewPlaceMarket, func_call_id, fc_source, external_data);
                     }
                     else //amount задан в базовой валюте
                     {
@@ -310,7 +310,7 @@ namespace CoreCX.Trading
 
                         if (market_rate == 0m) return StatusCodes.ErrorInsufficientMarketVolume;
 
-                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, sl_rate, tp_rate, (int)MessageTypes.NewPlaceInstant, func_call_id, fc_source, external_data);
+                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, sl_rate, tp_rate, ts_offset, MessageTypes.NewPlaceInstant, func_call_id, fc_source, external_data);
                     }
                 }
                 else //если заявка на продажу (1)
@@ -332,7 +332,7 @@ namespace CoreCX.Trading
 
                         if (market_rate == 0m) return StatusCodes.ErrorInsufficientMarketVolume;
 
-                        return BaseLimit(user_id, derived_currency, book, side, amount, market_rate, sl_rate, tp_rate, (int)MessageTypes.NewPlaceMarket, func_call_id, fc_source, external_data);
+                        return BaseLimit(user_id, derived_currency, book, side, amount, market_rate, sl_rate, tp_rate, ts_offset, MessageTypes.NewPlaceMarket, func_call_id, fc_source, external_data);
                     }
                     else //amount задан в базовой валюте
                     {
@@ -358,14 +358,14 @@ namespace CoreCX.Trading
 
                         if (market_rate == 0m) return StatusCodes.ErrorInsufficientMarketVolume;
 
-                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, sl_rate, tp_rate, (int)MessageTypes.NewPlaceInstant, func_call_id, fc_source, external_data);
+                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, sl_rate, tp_rate, ts_offset, MessageTypes.NewPlaceInstant, func_call_id, fc_source, external_data);
                     }
                 }
             }
             else return StatusCodes.ErrorCurrencyPairNotFound;
         }
 
-        internal StatusCodes CancelOrder(int user_id, long order_id, long func_call_id, int fc_source) //отменить активную заявку
+        internal StatusCodes CancelOrder(int user_id, long order_id, long func_call_id, FCSources fc_source) //отменить активную заявку
         {
             //реплицировать
 
@@ -407,6 +407,16 @@ namespace CoreCX.Trading
                                                     ord_canc_data.Book.RemoveSellTP(sell_index);
                                                     //Pusher.NewOrder((int)MessageTypes.NewRemoveTP, func_call_id, fc_source, order_kind, order); //сообщение о новой отмене заявки
                                                     CancelOrderDict.Remove(buy_order.TakeProfit.OrderId); //удаляем заявку из словаря на закрытие
+                                                }
+                                            }
+                                            if (buy_order.TrailingStop != null)
+                                            {
+                                                int sell_index = ord_canc_data.Book.SellTSs.IndexOf(buy_order.TrailingStop);
+                                                if (sell_index >= 0)
+                                                {
+                                                    ord_canc_data.Book.RemoveSellTS(sell_index);
+                                                    //Pusher.NewOrder((int)MessageTypes.NewRemoveTS, func_call_id, fc_source, order_kind, order); //сообщение о новой отмене заявки
+                                                    CancelOrderDict.Remove(buy_order.TrailingStop.OrderId); //удаляем заявку из словаря на закрытие
                                                 }
                                             }
                                         }
@@ -458,6 +468,16 @@ namespace CoreCX.Trading
                                                     ord_canc_data.Book.RemoveBuyTP(buy_index);
                                                     //Pusher.NewOrder((int)MessageTypes.NewRemoveTP, func_call_id, fc_source, order_kind, order); //сообщение о новой отмене заявки
                                                     CancelOrderDict.Remove(sell_order.TakeProfit.OrderId); //удаляем заявку из словаря на закрытие
+                                                }
+                                            }
+                                            if (sell_order.TrailingStop != null)
+                                            {
+                                                int buy_index = ord_canc_data.Book.BuyTSs.IndexOf(sell_order.TrailingStop);
+                                                if (buy_index >= 0)
+                                                {
+                                                    ord_canc_data.Book.RemoveBuyTS(buy_index);
+                                                    //Pusher.NewOrder((int)MessageTypes.NewRemoveTS, func_call_id, fc_source, order_kind, order); //сообщение о новой отмене заявки
+                                                    CancelOrderDict.Remove(sell_order.TrailingStop.OrderId); //удаляем заявку из словаря на закрытие
                                                 }
                                             }
                                         }
@@ -551,6 +571,45 @@ namespace CoreCX.Trading
                                     {
                                         ord_canc_data.Book.RemoveSellTP(sell_index);
                                         //Pusher.NewOrder((int)MessageTypes.NewRemoveTP, func_call_id, fc_source, order_kind, order); //сообщение о новой отмене заявки
+                                        CancelOrderDict.Remove(order_id); //удаляем заявку из словаря на закрытие
+
+                                        return StatusCodes.Success;
+                                    }
+                                    else return StatusCodes.ErrorCrossUserAccessDenied;
+                                }
+                                else return StatusCodes.ErrorOrderNotFound;
+                            }
+                        }
+                        else if (ord_canc_data.OrderType == CancOrdTypes.TrailingStop)
+                        {
+                            if (!ord_canc_data.Side) //нужно отменить TS на покупку
+                            {
+                                int buy_index = ord_canc_data.Book.BuyTSs.FindIndex(i => i.OrderId == order_id);
+                                if (buy_index >= 0) //заявка найдена в стакане на покупку
+                                {
+                                    Order buy_order = ord_canc_data.Book.BuyTSs[buy_index];
+                                    if (buy_order.UserId == user_id) //данная заявка принадлежит данному юзеру
+                                    {
+                                        ord_canc_data.Book.RemoveBuyTS(buy_index);
+                                        //Pusher.NewOrder((int)MessageTypes.NewRemoveTS, func_call_id, fc_source, order_kind, order); //сообщение о новой отмене заявки
+                                        CancelOrderDict.Remove(order_id); //удаляем заявку из словаря на закрытие
+
+                                        return StatusCodes.Success;
+                                    }
+                                    else return StatusCodes.ErrorCrossUserAccessDenied;
+                                }
+                                else return StatusCodes.ErrorOrderNotFound;
+                            }
+                            else //нужно отменить TS на продажу
+                            {
+                                int sell_index = ord_canc_data.Book.SellTSs.FindIndex(i => i.OrderId == order_id);
+                                if (sell_index >= 0) //заявка найдена в стакане на продажу
+                                {
+                                    Order sell_order = ord_canc_data.Book.SellTSs[sell_index];
+                                    if (sell_order.UserId == user_id) //данная заявка принадлежит данному юзеру
+                                    {
+                                        ord_canc_data.Book.RemoveSellTS(sell_index);
+                                        //Pusher.NewOrder((int)MessageTypes.NewRemoveTS, func_call_id, fc_source, order_kind, order); //сообщение о новой отмене заявки
                                         CancelOrderDict.Remove(order_id); //удаляем заявку из словаря на закрытие
 
                                         return StatusCodes.Success;
@@ -692,14 +751,14 @@ namespace CoreCX.Trading
 
         #region ORDER PLACEMENT & MATCHING
 
-        private StatusCodes BaseLimit(int user_id, string derived_currency, OrderBook book, bool side, decimal amount, decimal rate, decimal sl_rate, decimal tp_rate, int msg_type, long func_call_id, int fc_source, string external_data) //базовая функция размещения заявки 
+        private StatusCodes BaseLimit(int user_id, string derived_currency, OrderBook book, bool side, decimal amount, decimal rate, decimal sl_rate, decimal tp_rate, decimal ts_offset, MessageTypes msg_type, long func_call_id, FCSources fc_source, string external_data) //базовая функция размещения заявки 
         {
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то снимаем с него сумму и подаём заявку
             {
                 if (acc.Suspended) return StatusCodes.ErrorAccountSuspended; //проверка на блокировку счёта
                 if (String.IsNullOrEmpty(derived_currency)) return StatusCodes.ErrorInvalidCurrency; //проверка на корректность производной валюты
-                if (amount <= 0m || rate <= 0m || sl_rate < 0m || tp_rate < 0m) return StatusCodes.ErrorNegativeOrZeroValue; //проверка значений на положительность 
+                if (amount <= 0m || rate <= 0m || sl_rate < 0m || tp_rate < 0m || ts_offset < 0m) return StatusCodes.ErrorNegativeOrZeroValue; //проверка значений на положительность 
                 
                 if (!side) //если заявка на покупку (0)
                 {
@@ -729,6 +788,22 @@ namespace CoreCX.Trading
                             else return StatusCodes.ErrorIncorrectTakeProfitRate;
                         }
                         else return StatusCodes.ErrorTakeProfitUnavailable;
+                    }
+
+                    bool use_ts_offset = false;
+                    decimal ts_rate = 0m;
+                    if (ts_offset > 0m)
+                    {
+                        if (book.ActiveBuyOrders.Count > 0) //проверка уровня TS по отношению к рыночной цене на покупку
+                        {
+                            ts_rate = book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1].Rate - ts_offset;
+                            if (ts_rate > 0m) //сравнение с рыночным курсом на покупку (TS будет на продажу)
+                            {
+                                use_ts_offset = true;
+                            }
+                            else return StatusCodes.ErrorIncorrectTrailingStopOffset;
+                        }
+                        else return StatusCodes.ErrorTrailingStopUnavailable;
                     }
 
                     decimal total = amount * rate;
@@ -762,6 +837,15 @@ namespace CoreCX.Trading
                             book.InsertSellTP(tp_order);
                             CancelOrderDict.Add(tp_order.OrderId, new CancOrdData(derived_currency, book, CancOrdTypes.TakeProfit, !side)); //добавление заявки в словарь на закрытие
                             //Pusher.NewOrder((int)MessageTypes.NewAddTP, func_call_id, fc_source, position_type, order); //сообщение о новом TP
+                        }
+
+                        if (use_ts_offset)
+                        {
+                            TSOrder ts_order = new TSOrder(user_id, amount, 0m, ts_rate, fc_source, external_data, ts_offset);
+                            order.TrailingStop = ts_order;
+                            book.InsertSellTS(ts_order);
+                            CancelOrderDict.Add(ts_order.OrderId, new CancOrdData(derived_currency, book, CancOrdTypes.TrailingStop, !side)); //добавление заявки в словарь на закрытие
+                            //Pusher.NewOrder((int)MessageTypes.NewAddTS, func_call_id, fc_source, position_type, order); //сообщение о новом TS
                         }
                         
                         Match(derived_currency, book);
@@ -804,6 +888,15 @@ namespace CoreCX.Trading
                                 //Pusher.NewOrder((int)MessageTypes.NewAddTP, func_call_id, fc_source, position_type, order); //сообщение о новом TP
                             }
 
+                            if (use_ts_offset)
+                            {
+                                TSOrder ts_order = new TSOrder(user_id, amount, 0m, ts_rate, fc_source, external_data, ts_offset);
+                                order.TrailingStop = ts_order;
+                                book.InsertSellTS(ts_order);
+                                CancelOrderDict.Add(ts_order.OrderId, new CancOrdData(derived_currency, book, CancOrdTypes.TrailingStop, !side)); //добавление заявки в словарь на закрытие
+                                //Pusher.NewOrder((int)MessageTypes.NewAddTS, func_call_id, fc_source, position_type, order); //сообщение о новом TS
+                            }
+
                             Match(derived_currency, book);
                             return StatusCodes.Success;
                         }
@@ -840,6 +933,22 @@ namespace CoreCX.Trading
                         else return StatusCodes.ErrorTakeProfitUnavailable;
                     }
 
+                    bool use_ts_offset = false;
+                    decimal ts_rate = 0m;
+                    if (ts_offset > 0m)
+                    {
+                        if (book.ActiveSellOrders.Count > 0) //проверка уровня TS по отношению к рыночной цене на продажу
+                        {
+                            ts_rate = book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate + ts_offset;
+                            if (ts_rate > 0m) //сравнение с рыночным курсом на продажу (TS будет на покупку)
+                            {
+                                use_ts_offset = true;
+                            }
+                            else return StatusCodes.ErrorIncorrectTrailingStopOffset;
+                        }
+                        else return StatusCodes.ErrorTrailingStopUnavailable;
+                    }
+
                     DerivedFunds derived_funds = acc.DerivedCFunds[derived_currency];
                     if (derived_funds.AvailableFunds >= amount) //проверка на платежеспособность по производной валюте
                     {
@@ -871,6 +980,15 @@ namespace CoreCX.Trading
                             book.InsertBuyTP(tp_order);
                             CancelOrderDict.Add(tp_order.OrderId, new CancOrdData(derived_currency, book, CancOrdTypes.TakeProfit, !side)); //добавление заявки в словарь на закрытие
                             //Pusher.NewOrder((int)MessageTypes.NewAddTP, func_call_id, fc_source, position_type, order); //сообщение о новом TP
+                        }
+
+                        if (use_ts_offset)
+                        {
+                            TSOrder ts_order = new TSOrder(user_id, amount, 0m, ts_rate, fc_source, external_data, ts_offset);
+                            order.TrailingStop = ts_order;
+                            book.InsertBuyTS(ts_order);
+                            CancelOrderDict.Add(ts_order.OrderId, new CancOrdData(derived_currency, book, CancOrdTypes.TrailingStop, !side)); //добавление заявки в словарь на закрытие
+                            //Pusher.NewOrder((int)MessageTypes.NewAddTS, func_call_id, fc_source, position_type, order); //сообщение о новом TS
                         }
 
                         Match(derived_currency, book);
@@ -911,6 +1029,15 @@ namespace CoreCX.Trading
                                 book.InsertBuyTP(tp_order);
                                 CancelOrderDict.Add(tp_order.OrderId, new CancOrdData(derived_currency, book, CancOrdTypes.TakeProfit, !side)); //добавление заявки в словарь на закрытие
                                 //Pusher.NewOrder((int)MessageTypes.NewAddTP, func_call_id, fc_source, position_type, order); //сообщение о новом TP
+                            }
+
+                            if (use_ts_offset)
+                            {
+                                TSOrder ts_order = new TSOrder(user_id, amount, 0m, ts_rate, fc_source, external_data, ts_offset);
+                                order.TrailingStop = ts_order;
+                                book.InsertBuyTS(ts_order);
+                                CancelOrderDict.Add(ts_order.OrderId, new CancOrdData(derived_currency, book, CancOrdTypes.TrailingStop, !side)); //добавление заявки в словарь на закрытие
+                                //Pusher.NewOrder((int)MessageTypes.NewAddTS, func_call_id, fc_source, position_type, order); //сообщение о новом TS
                             }
 
                             Match(derived_currency, book);
@@ -979,17 +1106,19 @@ namespace CoreCX.Trading
                     buyer.BaseCFunds.AvailableFunds += sell_ord.ActualAmount * (buy_ord.Rate - trade_rate);
                     //Pusher.NewBalance(buy_ord.UserId, buyer, DateTime.Now); //сообщение о новом балансе
 
-                    //увеличивается ActualAmount привязанных к buy-заявке SL/TP заявок
+                    //увеличивается ActualAmount привязанных к buy-заявке SL/TP/TS заявок
                     if (buy_ord.StopLoss != null) buy_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
                     if (buy_ord.TakeProfit != null) buy_ord.TakeProfit.ActualAmount += sell_ord.ActualAmount;
+                    if (buy_ord.TrailingStop != null) buy_ord.TrailingStop.ActualAmount += sell_ord.ActualAmount;
 
                     //buy-заявка становится partially filled => уменьшается её ActualAmount
                     buy_ord.ActualAmount -= sell_ord.ActualAmount;
                     //Pusher.NewOrderStatus(buy_ord.OrderId, buy_ord.UserId, (int)OrdExecStatus.PartiallyFilled, DateTime.Now); //сообщение о новом статусе заявки
                     
-                    //увеличивается ActualAmount привязанных к sell-заявке SL/TP заявок
+                    //увеличивается ActualAmount привязанных к sell-заявке SL/TP/TS заявок
                     if (sell_ord.StopLoss != null) sell_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
                     if (sell_ord.TakeProfit != null) sell_ord.TakeProfit.ActualAmount += sell_ord.ActualAmount;
+                    if (sell_ord.TrailingStop != null) sell_ord.TrailingStop.ActualAmount += sell_ord.ActualAmount;
 
                     //sell-заявка становится filled => её ActualAmount становится нулевым
                     sell_ord.ActualAmount = 0m;
@@ -1025,17 +1154,19 @@ namespace CoreCX.Trading
                     buyer.BaseCFunds.AvailableFunds += buy_ord.ActualAmount * (buy_ord.Rate - trade_rate);
                     //Pusher.NewBalance(buy_ord.UserId, buyer, DateTime.Now); //сообщение о новом балансе
 
-                    //увеличивается ActualAmount привязанных к sell-заявке SL/TP заявок
+                    //увеличивается ActualAmount привязанных к sell-заявке SL/TP/TS заявок
                     if (sell_ord.StopLoss != null) sell_ord.StopLoss.ActualAmount += buy_ord.ActualAmount;
                     if (sell_ord.TakeProfit != null) sell_ord.TakeProfit.ActualAmount += buy_ord.ActualAmount;
+                    if (sell_ord.TrailingStop != null) sell_ord.TrailingStop.ActualAmount += buy_ord.ActualAmount;
 
                     //sell-заявка становится partially filled => уменьшается её ActualAmount
                     sell_ord.ActualAmount -= buy_ord.ActualAmount;
                     //Pusher.NewOrderStatus(sell_ord.OrderId, sell_ord.UserId, (int)OrdExecStatus.PartiallyFilled, DateTime.Now); //сообщение о новом статусе заявки
 
-                    //увеличивается ActualAmount привязанных к buy-заявке SL/TP заявок
+                    //увеличивается ActualAmount привязанных к buy-заявке SL/TP/TS заявок
                     if (buy_ord.StopLoss != null) buy_ord.StopLoss.ActualAmount += buy_ord.ActualAmount;
                     if (buy_ord.TakeProfit != null) buy_ord.TakeProfit.ActualAmount += buy_ord.ActualAmount;
+                    if (buy_ord.TrailingStop != null) buy_ord.TrailingStop.ActualAmount += buy_ord.ActualAmount;
 
                     //buy-заявка становится filled => её ActualAmount становится нулевым
                     buy_ord.ActualAmount = 0m;
@@ -1071,17 +1202,19 @@ namespace CoreCX.Trading
                     buyer.BaseCFunds.AvailableFunds += buy_ord.ActualAmount * (buy_ord.Rate - trade_rate);
                     //Pusher.NewBalance(buy_ord.UserId, buyer, DateTime.Now); //сообщение о новом балансе
 
-                    //увеличивается ActualAmount привязанных к buy-заявке SL/TP заявок
+                    //увеличивается ActualAmount привязанных к buy-заявке SL/TP/TS заявок
                     if (buy_ord.StopLoss != null) buy_ord.StopLoss.ActualAmount += buy_ord.ActualAmount;
                     if (buy_ord.TakeProfit != null) buy_ord.TakeProfit.ActualAmount += buy_ord.ActualAmount;
+                    if (buy_ord.TrailingStop != null) buy_ord.TrailingStop.ActualAmount += buy_ord.ActualAmount;
 
                     //buy-заявка становится filled => её ActualAmount становится нулевым
                     buy_ord.ActualAmount = 0m;
                     //Pusher.NewOrderStatus(buy_ord.OrderId, buy_ord.UserId, (int)OrdExecStatus.Filled, DateTime.Now); //сообщение о новом статусе заявки
 
-                    //увеличивается ActualAmount привязанных к sell-заявке SL/TP заявок
+                    //увеличивается ActualAmount привязанных к sell-заявке SL/TP/TS заявок
                     if (sell_ord.StopLoss != null) sell_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
                     if (sell_ord.TakeProfit != null) sell_ord.TakeProfit.ActualAmount += sell_ord.ActualAmount;
+                    if (sell_ord.TrailingStop != null) sell_ord.TrailingStop.ActualAmount += sell_ord.ActualAmount;
 
                     //sell-заявка становится filled => её ActualAmount становится нулевым
                     sell_ord.ActualAmount = 0m;
@@ -1296,7 +1429,7 @@ namespace CoreCX.Trading
             {
                 ManageSLs(book.Key, book.Value);
                 ManageTPs(book.Key, book.Value);
-                //ManageTSs(book.Key, book.Value);
+                ManageTSs(book.Key, book.Value);
             }
         }
 
@@ -1508,6 +1641,130 @@ namespace CoreCX.Trading
                         }
                     }
                     else break;
+                }
+            }
+        }
+
+        private void ManageTSs(string derived_currency, OrderBook book)
+        {
+            //реплицировать
+
+            //проверяем условия TS на продажу
+            for (int i = book.SellTSs.Count - 1; i >= 0; i--)
+            {
+                if (book.ActiveBuyOrders.Count > 0)
+                {
+                    TSOrder sell_ts = book.SellTSs[i];
+                    decimal cur_ts_rate = book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1].Rate - sell_ts.Offset;
+                    if (cur_ts_rate > sell_ts.Rate) //произошло повышение рыночной цены на покупку
+                    {
+                        //подтягиваем наверх цену TS
+                        sell_ts.Rate = cur_ts_rate;
+                    }
+                    else if (cur_ts_rate == sell_ts.Rate) break; //цена не изменилась
+                    else //цена упала => проверяем условие на срабатывание TS
+                    {
+                        if (book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1].Rate <= sell_ts.Rate) //сравнение с рыночным курсом на покупку (заявка будет на продажу)
+                        {
+                            //создаём рыночную заявку на продажу по рынку
+                            Account acc = Accounts[sell_ts.UserId];
+                            DerivedFunds derived_funds = acc.DerivedCFunds[derived_currency];
+
+                            //калькуляция rate для немедленного исполнения по рынку
+                            decimal market_rate = 0m;
+                            decimal accumulated_amount = 0m;
+                            for (int j = book.ActiveBuyOrders.Count - 1; j >= 0; j--)
+                            {
+                                accumulated_amount += book.ActiveBuyOrders[j].ActualAmount;
+                                if (accumulated_amount >= sell_ts.ActualAmount) //если объём накопленных заявок на покупку покрывает объём заявки на продажу
+                                {
+                                    market_rate = book.ActiveBuyOrders[j].Rate;
+                                    break;
+                                }
+                            }
+
+                            if (market_rate == 0) continue;
+
+                            if (derived_funds.AvailableFunds >= sell_ts.ActualAmount) //проверка на платежеспособность по производной валюте
+                            {
+                                derived_funds.AvailableFunds -= sell_ts.ActualAmount; //снимаем средства с доступных средств
+                                derived_funds.BlockedFunds += sell_ts.ActualAmount; //блокируем средства в заявке на продажу
+                                //Pusher.NewBalance(sell_ts.UserId, acc, DateTime.Now); //сообщение о новом балансе
+
+                                book.SellTSs.RemoveAt(i); //удаляем TS из памяти
+                                sell_ts.Rate = market_rate; //присвоение рыночной цены
+                                book.InsertSellOrder(sell_ts);
+                                //Pusher.NewOrder((int)MessageTypes.NewExecTS, true, new_sell_order); //сообщение о срабатывании TS
+                                //FixMessager.NewMarketDataIncrementalRefresh(true, new_sell_order); //FIX multicast
+
+                                Match(derived_currency, book);
+                            }
+                            else
+                            {
+                                book.SellTSs.RemoveAt(i); //удаляем TS из памяти 
+                            }
+                        }
+                    }
+                }
+            }
+
+            //проверяем условия TS на покупку
+            for (int i = book.BuyTSs.Count - 1; i >= 0; i--)
+            {
+                if (book.ActiveSellOrders.Count > 0)
+                {
+                    TSOrder buy_ts = book.BuyTSs[i];
+                    decimal cur_ts_rate = book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate + buy_ts.Offset;
+                    if (cur_ts_rate < buy_ts.Rate) //произошло понижение рыночной цены на продажу
+                    {
+                        //подтягиваем вниз цену TS
+                        buy_ts.Rate = cur_ts_rate;
+                    }
+                    else if (cur_ts_rate == buy_ts.Rate) break; //цена не изменилась
+                    else //цена выросла => проверяем условие на срабатывание TS
+                    {
+                        if (book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate >= buy_ts.Rate) //сравнение с рыночным курсом на покупку (заявка будет на покупку)
+                        {
+                            //создаём рыночную заявку на покупку по рынку
+                            Account acc = Accounts[buy_ts.UserId];
+                            buy_ts.ActualAmount = buy_ts.ActualAmount / (1m - acc.DerivedCFunds[derived_currency].Fee); //поправка на списание комиссии
+
+                            //калькуляция rate для немедленного исполнения по рынку
+                            decimal market_rate = 0m;
+                            decimal accumulated_amount = 0m;
+                            for (int j = book.ActiveSellOrders.Count - 1; j >= 0; j--)
+                            {
+                                accumulated_amount += book.ActiveSellOrders[j].ActualAmount;
+                                if (accumulated_amount >= buy_ts.ActualAmount) //если объём накопленных заявок на продажу покрывает объём заявки на покупку
+                                {
+                                    market_rate = book.ActiveSellOrders[j].Rate;
+                                    break;
+                                }
+                            }
+
+                            if (market_rate == 0) continue;
+
+                            decimal total = buy_ts.ActualAmount * market_rate;
+                            if (acc.BaseCFunds.AvailableFunds >= total) //проверка на платежеспособность по базовой валюте
+                            {
+                                acc.BaseCFunds.AvailableFunds -= total; //снимаем средства с доступных средств
+                                acc.BaseCFunds.BlockedFunds += total; //блокируем средства в заявке на продажу
+                                //Pusher.NewBalance(buy_ts.UserId, acc, DateTime.Now); //сообщение о новом балансе
+
+                                book.BuyTSs.RemoveAt(i); //удаляем TS из памяти
+                                buy_ts.Rate = market_rate; //присвоение рыночной цены
+                                book.InsertBuyOrder(buy_ts);
+                                //Pusher.NewOrder((int)MessageTypes.NewExecTS, false, new_buy_order); //сообщение о срабатывании TS
+                                //FixMessager.NewMarketDataIncrementalRefresh(false, new_buy_order); //FIX multicast
+
+                                Match(derived_currency, book);
+                            }
+                            else
+                            {
+                                book.BuyTSs.RemoveAt(i); //удаляем TS из памяти 
+                            }
+                        }
+                    }
                 }
             }
         }
