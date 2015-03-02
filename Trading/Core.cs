@@ -847,7 +847,9 @@ namespace CoreCX.Trading
                             CancelOrderDict.Add(ts_order.OrderId, new CancOrdData(derived_currency, book, CancOrdTypes.TrailingStop, !side)); //добавление заявки в словарь на закрытие
                             //Pusher.NewOrder((int)MessageTypes.NewAddTS, func_call_id, fc_source, position_type, order); //сообщение о новом TS
                         }
-                        
+
+                        InterlinkCondOrds(order); //линковка SL/TP/TS
+
                         Match(derived_currency, book);
                         return StatusCodes.Success;
                     }
@@ -896,6 +898,8 @@ namespace CoreCX.Trading
                                 CancelOrderDict.Add(ts_order.OrderId, new CancOrdData(derived_currency, book, CancOrdTypes.TrailingStop, !side)); //добавление заявки в словарь на закрытие
                                 //Pusher.NewOrder((int)MessageTypes.NewAddTS, func_call_id, fc_source, position_type, order); //сообщение о новом TS
                             }
+
+                            InterlinkCondOrds(order); //линковка SL/TP/TS
 
                             Match(derived_currency, book);
                             return StatusCodes.Success;
@@ -991,6 +995,8 @@ namespace CoreCX.Trading
                             //Pusher.NewOrder((int)MessageTypes.NewAddTS, func_call_id, fc_source, position_type, order); //сообщение о новом TS
                         }
 
+                        InterlinkCondOrds(order); //линковка SL/TP/TS
+
                         Match(derived_currency, book);
                         return StatusCodes.Success;
                     }
@@ -1039,6 +1045,8 @@ namespace CoreCX.Trading
                                 CancelOrderDict.Add(ts_order.OrderId, new CancOrdData(derived_currency, book, CancOrdTypes.TrailingStop, !side)); //добавление заявки в словарь на закрытие
                                 //Pusher.NewOrder((int)MessageTypes.NewAddTS, func_call_id, fc_source, position_type, order); //сообщение о новом TS
                             }
+
+                            InterlinkCondOrds(order); //линковка SL/TP/TS
 
                             Match(derived_currency, book);
                             return StatusCodes.Success;
@@ -1471,8 +1479,18 @@ namespace CoreCX.Trading
                             //Pusher.NewBalance(sell_sl.UserId, acc, DateTime.Now); //сообщение о новом балансе
                                                         
                             book.SellSLs.RemoveAt(i); //удаляем SL из памяти
+                            if (sell_sl.TakeProfit != null)
+                            {
+                                if (book.SellTPs.Remove(sell_sl.TakeProfit)) CancelOrderDict.Remove(sell_sl.TakeProfit.OrderId); //удаляем слинкованный TP из памяти
+                            }
+                            if (sell_sl.TrailingStop != null)
+                            {
+                                if (book.SellTSs.Remove(sell_sl.TrailingStop)) CancelOrderDict.Remove(sell_sl.TrailingStop.OrderId); //удаляем слинкованный TS из памяти
+                            }
+
                             sell_sl.Rate = market_rate; //присвоение рыночной цены
                             book.InsertSellOrder(sell_sl);
+                            CancelOrderDict[sell_sl.OrderId].OrderType = CancOrdTypes.Limit;
                             //Pusher.NewOrder((int)MessageTypes.NewExecSL, true, new_sell_order); //сообщение о срабатывании SL
                             //FixMessager.NewMarketDataIncrementalRefresh(true, new_sell_order); //FIX multicast
 
@@ -1480,7 +1498,9 @@ namespace CoreCX.Trading
                         }
                         else
                         {
-                            book.SellSLs.RemoveAt(i); //удаляем SL из памяти 
+                            book.SellSLs.RemoveAt(i); //удаляем SL из памяти
+                            CancelOrderDict.Remove(sell_sl.OrderId); //удаляем заявку из словаря на закрытие
+                            //TODO сообщение о том, что исполнение провалилось из-за отсутствия кэша
                         }
                     }
                     else break;
@@ -1522,8 +1542,18 @@ namespace CoreCX.Trading
                             //Pusher.NewBalance(buy_sl.UserId, acc, DateTime.Now); //сообщение о новом балансе
 
                             book.BuySLs.RemoveAt(i); //удаляем SL из памяти
+                            if (buy_sl.TakeProfit != null)
+                            {
+                                if (book.BuyTPs.Remove(buy_sl.TakeProfit)) CancelOrderDict.Remove(buy_sl.TakeProfit.OrderId); //удаляем слинкованный TP из памяти
+                            }
+                            if (buy_sl.TrailingStop != null)
+                            {
+                                if (book.BuyTSs.Remove(buy_sl.TrailingStop)) CancelOrderDict.Remove(buy_sl.TrailingStop.OrderId); //удаляем слинкованный TS из памяти
+                            }
+
                             buy_sl.Rate = market_rate;
                             book.InsertBuyOrder(buy_sl);
+                            CancelOrderDict[buy_sl.OrderId].OrderType = CancOrdTypes.Limit;
                             //Pusher.NewOrder((int)MessageTypes.NewExecSL, false, new_buy_order); //сообщение о срабатывании SL
                             //FixMessager.NewMarketDataIncrementalRefresh(false, new_buy_order); //FIX multicast
 
@@ -1531,7 +1561,9 @@ namespace CoreCX.Trading
                         }
                         else
                         {
-                            book.BuySLs.RemoveAt(i); //удаляем SL из памяти 
+                            book.BuySLs.RemoveAt(i); //удаляем SL из памяти
+                            CancelOrderDict.Remove(buy_sl.OrderId); //удаляем заявку из словаря на закрытие
+                            //TODO сообщение о том, что исполнение провалилось из-за отсутствия кэша
                         }
                     }
                     else break;
@@ -1577,8 +1609,18 @@ namespace CoreCX.Trading
                             //Pusher.NewBalance(sell_tp.UserId, acc, DateTime.Now); //сообщение о новом балансе
 
                             book.SellTPs.RemoveAt(i); //удаляем TP из памяти
+                            if (sell_tp.StopLoss != null)
+                            {
+                                if (book.SellSLs.Remove(sell_tp.StopLoss)) CancelOrderDict.Remove(sell_tp.StopLoss.OrderId); //удаляем слинкованный SL из памяти
+                            }
+                            if (sell_tp.TrailingStop != null)
+                            {
+                                if (book.SellTSs.Remove(sell_tp.TrailingStop)) CancelOrderDict.Remove(sell_tp.TrailingStop.OrderId); //удаляем слинкованный TS из памяти
+                            }
+
                             sell_tp.Rate = market_rate; //присвоение рыночной цены
                             book.InsertSellOrder(sell_tp);
+                            CancelOrderDict[sell_tp.OrderId].OrderType = CancOrdTypes.Limit;
                             //Pusher.NewOrder((int)MessageTypes.NewExecTP, true, new_sell_order); //сообщение о срабатывании TP
                             //FixMessager.NewMarketDataIncrementalRefresh(true, new_sell_order); //FIX multicast
 
@@ -1586,7 +1628,9 @@ namespace CoreCX.Trading
                         }
                         else
                         {
-                            book.SellTPs.RemoveAt(i); //удаляем TP из памяти 
+                            book.SellTPs.RemoveAt(i); //удаляем TP из памяти
+                            CancelOrderDict.Remove(sell_tp.OrderId); //удаляем заявку из словаря на закрытие
+                            //TODO сообщение о том, что исполнение провалилось из-за отсутствия кэша
                         }
                     }
                     else break;
@@ -1628,8 +1672,18 @@ namespace CoreCX.Trading
                             //Pusher.NewBalance(buy_tp.UserId, acc, DateTime.Now); //сообщение о новом балансе
 
                             book.BuyTPs.RemoveAt(i); //удаляем TP из памяти
+                            if (buy_tp.StopLoss != null)
+                            {
+                                if (book.BuySLs.Remove(buy_tp.StopLoss)) CancelOrderDict.Remove(buy_tp.StopLoss.OrderId); //удаляем слинкованный SL из памяти
+                            }
+                            if (buy_tp.TrailingStop != null)
+                            {
+                                if (book.BuyTSs.Remove(buy_tp.TrailingStop)) CancelOrderDict.Remove(buy_tp.TrailingStop.OrderId); //удаляем слинкованный TS из памяти
+                            }
+
                             buy_tp.Rate = market_rate;
                             book.InsertBuyOrder(buy_tp);
+                            CancelOrderDict[buy_tp.OrderId].OrderType = CancOrdTypes.Limit;
                             //Pusher.NewOrder((int)MessageTypes.NewExecTP, false, new_buy_order); //сообщение о срабатывании TP
                             //FixMessager.NewMarketDataIncrementalRefresh(false, new_buy_order); //FIX multicast
 
@@ -1637,7 +1691,9 @@ namespace CoreCX.Trading
                         }
                         else
                         {
-                            book.BuyTPs.RemoveAt(i); //удаляем TP из памяти 
+                            book.BuyTPs.RemoveAt(i); //удаляем TP из памяти
+                            CancelOrderDict.Remove(buy_tp.OrderId); //удаляем заявку из словаря на закрытие
+                            //TODO сообщение о том, что исполнение провалилось из-за отсутствия кэша
                         }
                     }
                     else break;
@@ -1692,8 +1748,18 @@ namespace CoreCX.Trading
                                 //Pusher.NewBalance(sell_ts.UserId, acc, DateTime.Now); //сообщение о новом балансе
 
                                 book.SellTSs.RemoveAt(i); //удаляем TS из памяти
+                                if (sell_ts.StopLoss != null)
+                                {
+                                    if (book.SellSLs.Remove(sell_ts.StopLoss)) CancelOrderDict.Remove(sell_ts.StopLoss.OrderId); //удаляем слинкованный SL из памяти
+                                }
+                                if (sell_ts.TakeProfit != null)
+                                {
+                                    if (book.SellTPs.Remove(sell_ts.TakeProfit)) CancelOrderDict.Remove(sell_ts.TakeProfit.OrderId); //удаляем слинкованный TP из памяти
+                                }
+
                                 sell_ts.Rate = market_rate; //присвоение рыночной цены
                                 book.InsertSellOrder(sell_ts);
+                                CancelOrderDict[sell_ts.OrderId].OrderType = CancOrdTypes.Limit;
                                 //Pusher.NewOrder((int)MessageTypes.NewExecTS, true, new_sell_order); //сообщение о срабатывании TS
                                 //FixMessager.NewMarketDataIncrementalRefresh(true, new_sell_order); //FIX multicast
 
@@ -1701,7 +1767,9 @@ namespace CoreCX.Trading
                             }
                             else
                             {
-                                book.SellTSs.RemoveAt(i); //удаляем TS из памяти 
+                                book.SellTSs.RemoveAt(i); //удаляем TS из памяти
+                                CancelOrderDict.Remove(sell_ts.OrderId); //удаляем заявку из словаря на закрытие
+                                //TODO сообщение о том, что исполнение провалилось из-за отсутствия кэша
                             }
                         }
                     }
@@ -1752,8 +1820,18 @@ namespace CoreCX.Trading
                                 //Pusher.NewBalance(buy_ts.UserId, acc, DateTime.Now); //сообщение о новом балансе
 
                                 book.BuyTSs.RemoveAt(i); //удаляем TS из памяти
+                                if (buy_ts.StopLoss != null)
+                                {
+                                    if (book.BuySLs.Remove(buy_ts.StopLoss)) CancelOrderDict.Remove(buy_ts.StopLoss.OrderId); //удаляем слинкованный SL из памяти
+                                }
+                                if (buy_ts.TakeProfit != null)
+                                {
+                                    if (book.BuyTPs.Remove(buy_ts.TakeProfit)) CancelOrderDict.Remove(buy_ts.TakeProfit.OrderId); //удаляем слинкованный TP из памяти
+                                }
+
                                 buy_ts.Rate = market_rate; //присвоение рыночной цены
                                 book.InsertBuyOrder(buy_ts);
+                                CancelOrderDict[buy_ts.OrderId].OrderType = CancOrdTypes.Limit;
                                 //Pusher.NewOrder((int)MessageTypes.NewExecTS, false, new_buy_order); //сообщение о срабатывании TS
                                 //FixMessager.NewMarketDataIncrementalRefresh(false, new_buy_order); //FIX multicast
 
@@ -1761,7 +1839,9 @@ namespace CoreCX.Trading
                             }
                             else
                             {
-                                book.BuyTSs.RemoveAt(i); //удаляем TS из памяти 
+                                book.BuyTSs.RemoveAt(i); //удаляем TS из памяти
+                                CancelOrderDict.Remove(buy_ts.OrderId); //удаляем заявку из словаря на закрытие
+                                //TODO сообщение о том, что исполнение провалилось из-за отсутствия кэша
                             }
                         }
                     }
@@ -1769,9 +1849,29 @@ namespace CoreCX.Trading
             }
         }
 
+        private void InterlinkCondOrds(Order order)
+        {
+            if (order.StopLoss != null && order.TakeProfit != null) //линковка SL/TP
+            {
+                order.StopLoss.TakeProfit = order.TakeProfit;
+                order.TakeProfit.StopLoss = order.StopLoss;
+            }
+
+            if (order.TakeProfit != null && order.TrailingStop != null) //линковка TP/TS
+            {
+                order.TakeProfit.TrailingStop = order.TrailingStop;
+                order.TrailingStop.TakeProfit = order.TakeProfit;
+            }
+
+            if (order.StopLoss != null && order.TrailingStop != null) //линковка SL/TS
+            {
+                order.StopLoss.TrailingStop = order.TrailingStop;
+                order.TrailingStop.StopLoss = order.StopLoss;
+            }
+        }
+
         #endregion
-
-
+        
         #region CURRENCY PAIR MANAGEMENT
 
         private string[] SplitCurrencyPair(string currency_pair) //получение валют, входящих в пару
