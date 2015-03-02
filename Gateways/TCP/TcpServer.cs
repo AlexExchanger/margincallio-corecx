@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading;
@@ -10,15 +7,15 @@ namespace CoreCX.Gateways.TCP
 {
     class TcpServer
     {        
-        //прослушиваемые порты (неизменны с момента старта приложения)
+        //прослушиваемые порты (константы с момента старта инстанса ядра)
         private int WebAppPort;
         private int HttpApiPort;
         private int DaemonPort;
 
-        //адреса для IP-рестрикта !TODO функция управления рестриктом)
-        internal string WebAppIP { get; set; }
-        internal string HttpApiIP { get; set; }
-        internal string DaemonIP { get; set; }
+        //адреса для IP-рестрикта TODO функция управления рестриктом)
+        private string WebAppIP;
+        private string HttpApiIP;
+        private string DaemonIP;
 
         internal TcpServer(int web_app_port, int http_api_port, int daemon_port)
         {
@@ -37,13 +34,13 @@ namespace CoreCX.Gateways.TCP
             web_app_thread.Start();
             Console.WriteLine("WEB APP: listening thread started");
 
-            Thread http_api_thread = new Thread(new ThreadStart(ListenHttpApiThread));
-            http_api_thread.Start();
-            Console.WriteLine("HTTP API: listening thread started");
+            //Thread http_api_thread = new Thread(new ThreadStart(ListenHttpApiThread));
+            //http_api_thread.Start();
+            //Console.WriteLine("HTTP API: listening thread started");
 
-            Thread daemon_thread = new Thread(new ThreadStart(ListenHandleDaemonThread));
-            daemon_thread.Start();
-            Console.WriteLine("DAEMON: listening/handling thread started");
+            //Thread daemon_thread = new Thread(new ThreadStart(ListenHandleDaemonThread));
+            //daemon_thread.Start();
+            //Console.WriteLine("DAEMON: listening/handling thread started");
         }
 
         private void ListenWebAppThread() //TODO add IP restriction
@@ -114,15 +111,12 @@ namespace CoreCX.Gateways.TCP
 
                     if (_parsed)
                     {
-                        Console.WriteLine("WEB APP: to queue function #" + func_id);
-
-                        //попытка парсинга аргументов и постановки в очередь соответствующей функции
-                        NativeFC.QueueWebAppFuncCall(client, func_id, str_args);
+                        Console.WriteLine("WEB APP: to queue function #" + func_id);                        
+                        WebAppRequest.QueueFC(client, func_id, str_args); //попытка парсинга аргументов и постановки в очередь соответствующей функции
                     }
                     else //ошибка JSON-парсинга
                     {
-                        SocketIO.Write(client, JsonManager.FormTechJson((int)StatusCodes.ErrorInvalidJsonInput));
-                        Console.WriteLine("WEB APP: [tech JSON parse failed]");
+                        WebAppResponse.RejectInvalidJson(client);                        
                     }
                 }
             }
@@ -131,147 +125,147 @@ namespace CoreCX.Gateways.TCP
             Console.WriteLine("WEB APP: connection closed");
         }
 
-        private void ListenHttpApiThread()
-        {
-            //запуск TCP-акцептора
-            try
-            {
-                TcpListener listener = new TcpListener(IPAddress.Any, HttpApiPort);
-                listener.Start();
+        //private void ListenHttpApiThread()
+        //{
+        //    //запуск TCP-акцептора
+        //    try
+        //    {
+        //        TcpListener listener = new TcpListener(IPAddress.Any, HttpApiPort);
+        //        listener.Start();
 
-                while (true)
-                {
-                    Console.WriteLine("HTTP API: waiting for connections");
+        //        while (true)
+        //        {
+        //            Console.WriteLine("HTTP API: waiting for connections");
 
-                    //ожидаем подключения сервисных клиентов
-                    TcpClient client = listener.AcceptTcpClient();
+        //            //ожидаем подключения сервисных клиентов
+        //            TcpClient client = listener.AcceptTcpClient();
 
-                    //проверка по IP клиента: HTTP API
-                    string remote_ip = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString(); //получаем IP подключившегося клиента
+        //            //проверка по IP клиента: HTTP API
+        //            string remote_ip = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString(); //получаем IP подключившегося клиента
 
-                    Console.WriteLine("HTTP API: connection request from " + remote_ip);
+        //            Console.WriteLine("HTTP API: connection request from " + remote_ip);
 
-                    if (remote_ip == HttpApiIP) //HTTP API
-                    {
-                        Console.WriteLine("HTTP API: client connected");
-                        ThreadPool.QueueUserWorkItem(new WaitCallback(HandleHttpApiThread), client);                        
-                    }
-                    else //неизвестный клиент
-                    {
-                        client.Close();
-                        Console.WriteLine("HTTP API: client rejected by IP restriction");
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("==TCP ERROR==");
-                Console.WriteLine(e.ToString());
-            }
-        }
+        //            if (remote_ip == HttpApiIP) //HTTP API
+        //            {
+        //                Console.WriteLine("HTTP API: client connected");
+        //                ThreadPool.QueueUserWorkItem(new WaitCallback(HandleHttpApiThread), client);                        
+        //            }
+        //            else //неизвестный клиент
+        //            {
+        //                client.Close();
+        //                Console.WriteLine("HTTP API: client rejected by IP restriction");
+        //            }
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Console.WriteLine("==TCP ERROR==");
+        //        Console.WriteLine(e.ToString());
+        //    }
+        //}
 
-        private void HandleHttpApiThread(object obj)
-        {
-            TcpClient client = obj as TcpClient;
+        //private void HandleHttpApiThread(object obj)
+        //{
+        //    TcpClient client = obj as TcpClient;
 
-            while (true)
-            {
-                //получаем команду, парсим и ставим в очередь
-                string received = SocketIO.Read(client);
+        //    while (true)
+        //    {
+        //        //получаем команду, парсим и ставим в очередь
+        //        string received = SocketIO.Read(client);
 
-                Console.WriteLine("HTTP API: received " + received);
+        //        Console.WriteLine("HTTP API: received " + received);
 
-                if (received == "dc") break;
+        //        if (received == "dc") break;
 
-                //JSON-парсинг вызова функции ядра
-                int func_id;
-                string[] str_args;
-                bool _parsed = JsonManager.ParseTechJson(received, out func_id, out str_args);
+        //        //JSON-парсинг вызова функции ядра
+        //        int func_id;
+        //        string[] str_args;
+        //        bool _parsed = JsonManager.ParseTechJson(received, out func_id, out str_args);
 
-                if (_parsed)
-                {
-                    Console.WriteLine("HTTP API: to queue function #" + func_id);
+        //        if (_parsed)
+        //        {
+        //            Console.WriteLine("HTTP API: to queue function #" + func_id);
 
-                    //попытка парсинга аргументов и постановки в очередь соответствующей функции
-                    NativeFC.QueueHttpApiFuncCall(client, func_id, str_args);
-                }
-                else //ошибка JSON-парсинга
-                {
-                    Console.WriteLine("HTTP API: [tech JSON parse failed]");
-                }
-            }
+        //            //попытка парсинга аргументов и постановки в очередь соответствующей функции
+        //            NativeFC.QueueHttpApiFuncCall(client, func_id, str_args);
+        //        }
+        //        else //ошибка JSON-парсинга
+        //        {
+        //            Console.WriteLine("HTTP API: [tech JSON parse failed]");
+        //        }
+        //    }
 
-            client.Close();
-            Console.WriteLine("HTTP API: connection closed");
-        }
+        //    client.Close();
+        //    Console.WriteLine("HTTP API: connection closed");
+        //}
 
-        private void ListenHandleDaemonThread() //TODO add IP restriction
-        {
-            //запуск TCP-акцептора
-            try
-            {
-                TcpListener listener = new TcpListener(IPAddress.Any, DaemonPort);
-                listener.Start();
+        //private void ListenHandleDaemonThread() //TODO add IP restriction
+        //{
+        //    //запуск TCP-акцептора
+        //    try
+        //    {
+        //        TcpListener listener = new TcpListener(IPAddress.Any, DaemonPort);
+        //        listener.Start();
 
-                while (true)
-                {
-                    Console.WriteLine("DAEMON: waiting for connections");
+        //        while (true)
+        //        {
+        //            Console.WriteLine("DAEMON: waiting for connections");
 
-                    //ожидаем подключения сервисных клиентов
-                    TcpClient client = listener.AcceptTcpClient();
+        //            //ожидаем подключения сервисных клиентов
+        //            TcpClient client = listener.AcceptTcpClient();
 
-                    //проверка по IP клиента: DAEMON
-                    string remote_ip = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString(); //получаем IP подключившегося клиента
+        //            //проверка по IP клиента: DAEMON
+        //            string remote_ip = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString(); //получаем IP подключившегося клиента
 
-                    Console.WriteLine("DAEMON: connection request from " + remote_ip);
+        //            Console.WriteLine("DAEMON: connection request from " + remote_ip);
 
-                    //  <<<< MOVE INSIDE THE CONNECTED SNIPPET BELOW (TO ADD IP RECTRICTION)
-                    Console.WriteLine("DAEMON: client connected [test mode]");
-                    while (true)
-                    {
-                        //попытка преобразовать сообщение в JSON и отправить его демону
-                        IJsonSerializable msg;
-                        if (Queues.daemon_queue.TryPeek(out msg))
-                        {
-                            bool _sent = SocketIO.Write(client, msg.Serialize());
+        //            //  <<<< MOVE INSIDE THE CONNECTED SNIPPET BELOW (TO ADD IP RECTRICTION)
+        //            Console.WriteLine("DAEMON: client connected [test mode]");
+        //            while (true)
+        //            {
+        //                //попытка преобразовать сообщение в JSON и отправить его демону
+        //                IJsonSerializable msg;
+        //                if (Queues.daemon_queue.TryPeek(out msg))
+        //                {
+        //                    bool _sent = SocketIO.Write(client, msg.Serialize());
 
-                            if (_sent)
-                            {
-                                Console.WriteLine("DAEMON: message sent");
-                                Queues.daemon_queue.TryDequeue(out msg);
-                            }
-                            else
-                            {
-                                Console.WriteLine("DAEMON: failed to send a message (dc)");
-                                break;
-                            }
-                        }
-                    }
+        //                    if (_sent)
+        //                    {
+        //                        Console.WriteLine("DAEMON: message sent");
+        //                        Queues.daemon_queue.TryDequeue(out msg);
+        //                    }
+        //                    else
+        //                    {
+        //                        Console.WriteLine("DAEMON: failed to send a message (dc)");
+        //                        break;
+        //                    }
+        //                }
+        //            }
 
-                    client.Close();
-                    Console.WriteLine("DAEMON: connection closed");
+        //            client.Close();
+        //            Console.WriteLine("DAEMON: connection closed");
 
-                    //if (remote_ip == DaemonIP) //DAEMON
-                    //{
-                    //    Console.WriteLine("DAEMON: client connected");
-                    //
-                    //    //логика выгребания из очереди в сокет Slave-ядра
-                    //    //MOVE LOGIC HERE
-                    //
-                    //}
-                    //else //неизвестный клиент
-                    //{
-                    //    client.Close();
-                    //    Console.WriteLine("DAEMON: client rejected by IP restriction");
-                    //}
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("==TCP ERROR==");
-                Console.WriteLine(e.ToString());
-            }
-        }
+        //            //if (remote_ip == DaemonIP) //DAEMON
+        //            //{
+        //            //    Console.WriteLine("DAEMON: client connected");
+        //            //
+        //            //    //логика выгребания из очереди в сокет Slave-ядра
+        //            //    //MOVE LOGIC HERE
+        //            //
+        //            //}
+        //            //else //неизвестный клиент
+        //            //{
+        //            //    client.Close();
+        //            //    Console.WriteLine("DAEMON: client rejected by IP restriction");
+        //            //}
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Console.WriteLine("==TCP ERROR==");
+        //        Console.WriteLine(e.ToString());
+        //    }
+        //}
         
     }
 }

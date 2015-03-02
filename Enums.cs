@@ -9,109 +9,22 @@ namespace CoreCX
         DeleteAccount = 400,
         DepositFunds = 500,
         WithdrawFunds = 600,
-        BaseLimit = 650, //replication-only
         PlaceLimit = 700,
         PlaceMarket = 800,
-        PlaceInstant = 900,
-        CancelOrder = 1000,
-        AddSL = 1100,
-        AddTP = 1200,
-        AddTS = 1300,
-        RemoveSL = 1400,
-        RemoveTP = 1500,
-        RemoveTS = 1600,
+        CancelOrder = 900,
+        SetAccountFee = 1000,
 
-        CreateFixAccount = 1700,
-        GenerateNewFixPassword = 1800,
-        GetFixAccounts = 1900,
-        CancelFixAccount = 2000,
-
-        GenerateApiKey = 2100,
-        GetApiKeys = 2200,
-        CancelApiKey = 2300,
-
-        GetAccountInfo = 2400,
-        GetOrderInfo = 2500,
-        GetSLInfo = 2600,
-        GetTPInfo = 2700,
-        GetTSInfo = 2800,
-        GetOpenOrders = 2900,
-        GetOpenConditionalOrders = 3000,
-        SetAccountFee = 3100,
-        GetTicker = 3200,
-        GetDepth = 3300,
-        GetMarginParameters = 3400,
-        SetMaxLeverage = 3500,
-        SetMCLevel = 3600,
-        SetFLLevel = 3700,
-
-        GetAccountInfo_HTTP = 50000,
-        GetOpenOrders_HTTP = 50100,
-        GetOpenConditionalOrders_HTTP = 50200,
-        PlaceLimit_HTTP = 50300,
-        PlaceMarket_HTTP = 50400,
-        PlaceInstant_HTTP = 50500,
-        CancelOrder_HTTP = 50600,
-        AddSL_HTTP = 50700,
-        AddTP_HTTP = 50800,
-        AddTS_HTTP = 50900,
-        RemoveSL_HTTP = 51000,
-        RemoveTP_HTTP = 51100,
-        RemoveTS_HTTP = 51200,
-
-        ManageMargin = 60000, //replication-only
-        ManageSLs = 60100, //replication-only
-        ManageTPs = 60200, //replication-only
-        ManageTSs = 60300, //replication-only
-
-        Authorize = 65000, //replication-only
-        MarkFixAccountsActive = 65100, //replication-only
-
-        CloseMarket = 79000,
-        OpenMarket = 79100,
-        RestartFix = 79500,
-
-        BackupMasterSnapshot = 80000,
-        RestoreMasterSnapshot = 80100,
-        RestoreSlaveSnapshot = 80200,
-
-        RestrictWebAppIP = 85000,
-        RestrictHttpApiIP = 85100,
-        RestrictDaemonIP = 85200
+        GetAccountBalance = 2400,
+        GetWithdrawalLimit = 2500, 
+        GetOrderInfo = 2600,
+        GetOpenOrders = 2700,
+        GetTicker = 2800,
+        GetDepth = 2900
     }
 
     internal enum MarketClosedForbiddenFuncIds
     {
-        DepositFunds = 500,
-        WithdrawFunds = 600,
-        PlaceLimit = 700,
-        PlaceMarket = 800,
-        PlaceInstant = 900,
-        CancelOrder = 1000,
-        AddSL = 1100,
-        AddTP = 1200,
-        AddTS = 1300,
-        RemoveSL = 1400,
-        RemoveTP = 1500,
-        RemoveTS = 1600,
 
-        CreateFixAccount = 1700,
-        GenerateNewFixPassword = 1800,
-        CancelFixAccount = 2000,
-
-        GenerateApiKey = 2100,
-        CancelApiKey = 2300,
-
-        PlaceLimit_HTTP = 50300,
-        PlaceMarket_HTTP = 50400,
-        PlaceInstant_HTTP = 50500,
-        CancelOrder_HTTP = 50600,
-        AddSL_HTTP = 50700,
-        AddTP_HTTP = 50800,
-        AddTS_HTTP = 50900,
-        RemoveSL_HTTP = 51000,
-        RemoveTP_HTTP = 51100,
-        RemoveTS_HTTP = 51200,
     }
 
     internal enum StatusCodes

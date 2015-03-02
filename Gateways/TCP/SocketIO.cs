@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Net.Sockets;
-using System.Net;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
 
 namespace CoreCX.Gateways.TCP
 {

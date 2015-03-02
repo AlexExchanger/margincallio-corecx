@@ -178,7 +178,7 @@ namespace CoreCX.Trading
             }
             else return StatusCodes.ErrorAccountNotFound;
         }
-        
+               
         internal StatusCodes WithdrawFunds(int user_id, string currency, decimal amount) //снять с торгового счёта
         {
             //реплицировать
@@ -628,11 +628,42 @@ namespace CoreCX.Trading
             else return StatusCodes.ErrorAccountNotFound;
         }
 
+        //TODO решить с Антоном вопрос насчёт Fee (привязана к derived currency)
+        internal StatusCodes GetAccountBalance(int user_id, string currency, out decimal available_funds, out decimal blocked_funds) //получить баланс торгового счёта в заданной валюте
+        {
+            available_funds = 0m;
+            blocked_funds = 0m;
 
+            Account acc;
+            if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то получаем баланс
+            {
+                if (currency == base_currency) //расчёт базовой валюты
+                {
+                    available_funds = acc.BaseCFunds.AvailableFunds;
+                    blocked_funds = acc.BaseCFunds.BlockedFunds;
+                    return StatusCodes.Success;
+                }
+                else //расчёт производной валюты
+                {
+                    DerivedFunds funds;
+                    if (acc.DerivedCFunds.TryGetValue(currency, out funds))
+                    {
+                        available_funds = funds.AvailableFunds;
+                        blocked_funds = funds.BlockedFunds;
+                        return StatusCodes.Success;
+                    }
+                    else return StatusCodes.ErrorCurrencyNotFound;
+                }
+            }
+            else return StatusCodes.ErrorAccountNotFound;
+        }
 
+        internal StatusCodes GetAccountParameters(int user_id) //получить значения параметров торгового счёта
+        {
+            return StatusCodes.Success;
+        }
 
-
-        internal StatusCodes GetAvailableToWithdrawFunds(int user_id, string currency, out decimal amount) //получение суммы средств, доступной для вывода
+        internal StatusCodes GetWithdrawalLimit(int user_id, string currency, out decimal amount) //получить лимит средств, доступных для вывода
         {
             amount = 0m;
 
@@ -687,7 +718,6 @@ namespace CoreCX.Trading
             }
             else return StatusCodes.ErrorAccountNotFound;
         }
-
 
 
         #endregion
@@ -1351,12 +1381,14 @@ namespace CoreCX.Trading
                         acc.Value.BaseCFunds.AvailableFunds -= fl_sum; //снимаем средства с доступных средств
                         acc.Value.BaseCFunds.BlockedFunds += fl_sum; //блокируем средства в заявке на покупку                            
                         //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+
                         Order order = new Order(acc.Key, fl_amount, fl_amount, fl_market_rate);
                         fl_book.InsertBuyOrder(order);
                         CancelOrderDict.Add(order.OrderId, new CancOrdData(fl_derived_currency, fl_book, CancOrdTypes.Limit, fl_side)); //добавление заявки в словарь на закрытие
                         //Pusher.NewOrder((int)MessageTypes.NewForcedLiquidation, false, order); //сообщение о новой FL-заявке
                         //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
                         //if (fc_source == (int)FCSources.FixApi) FixMessager.NewExecutionReport(external_data, func_call_id, side, order); //FIX-сообщение о новой заявке
+
                         Match(fl_derived_currency, fl_book);
                     }
                     else //заявка на продажу
@@ -1365,12 +1397,14 @@ namespace CoreCX.Trading
                         derived_funds.AvailableFunds -= fl_amount; //снимаем средства с доступных средств
                         derived_funds.BlockedFunds += fl_amount; //блокируем средства в заявке на продажу
                         //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+
                         Order order = new Order(acc.Key, fl_amount, fl_amount, fl_market_rate);
                         fl_book.InsertSellOrder(order);
                         CancelOrderDict.Add(order.OrderId, new CancOrdData(fl_derived_currency, fl_book, CancOrdTypes.Limit, fl_side)); //добавление заявки в словарь на закрытие
                         //Pusher.NewOrder((int)MessageTypes.NewForcedLiquidation, true, order); //сообщение о новой FL-заявке
                         //FixMessager.NewMarketDataIncrementalRefresh(side, order); //FIX multicast
                         //if (fc_source == (int)FCSources.FixApi) FixMessager.NewExecutionReport(external_data, func_call_id, side, order); //FIX-сообщение о новой заявке
+
                         Match(fl_derived_currency, fl_book);
                     }
                 }

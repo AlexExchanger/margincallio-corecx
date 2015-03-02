@@ -36,6 +36,9 @@
   <PropertyGroup>
     <StartupObject>CoreCX.App</StartupObject>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>favicon.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -52,9 +55,10 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="FuncCall.cs" />
     <Compile Include="Gateways\TCP\JsonManager.cs" />
-    <Compile Include="Gateways\TCP\NativeFC.cs" />
     <Compile Include="Gateways\TCP\SocketIO.cs" />
     <Compile Include="Gateways\TCP\TcpServer.cs" />
+    <Compile Include="Gateways\TCP\WebAppRequest.cs" />
+    <Compile Include="Gateways\TCP\WebAppResponse.cs" />
     <Compile Include="Processor.cs" />
     <Compile Include="Queues.cs" />
     <Compile Include="Trading\Account.cs" />
@@ -80,6 +84,9 @@
   <ItemGroup>
     <Folder Include="Gateways\FIX\" />
     <Folder Include="Recovery\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="favicon.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
