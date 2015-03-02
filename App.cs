@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Configuration;
 using CoreCX.Trading;
+using CoreCX.Gateways.TCP;
 
 namespace CoreCX
 {
@@ -8,11 +9,13 @@ namespace CoreCX
     {
         //объекты уровня приложения
         internal static Core core;
+        internal static TcpServer tcpsrv;
         internal static Processor proc;
 
         static void Main(string[] args)
         {
             core = new Core(ConfigurationManager.AppSettings["base_currency"], ConfigurationManager.AppSettings["currency_pair_separator"][0]);
+            tcpsrv = new TcpServer(int.Parse(ConfigurationManager.AppSettings["web_app_port"]), int.Parse(ConfigurationManager.AppSettings["http_api_port"]), int.Parse(ConfigurationManager.AppSettings["daemon_port"]));
             proc = new Processor();
 
 

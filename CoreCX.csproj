@@ -51,6 +51,10 @@
     <Compile Include="Enums.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="FuncCall.cs" />
+    <Compile Include="Gateways\TCP\JsonManager.cs" />
+    <Compile Include="Gateways\TCP\NativeFC.cs" />
+    <Compile Include="Gateways\TCP\SocketIO.cs" />
+    <Compile Include="Gateways\TCP\TcpServer.cs" />
     <Compile Include="Processor.cs" />
     <Compile Include="Queues.cs" />
     <Compile Include="Trading\Account.cs" />
@@ -75,7 +79,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Gateways\FIX\" />
-    <Folder Include="Gateways\TCP\" />
     <Folder Include="Recovery\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
