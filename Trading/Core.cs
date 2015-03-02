@@ -1481,11 +1481,19 @@ namespace CoreCX.Trading
                             book.SellSLs.RemoveAt(i); //удаляем SL из памяти
                             if (sell_sl.TakeProfit != null)
                             {
-                                if (book.SellTPs.Remove(sell_sl.TakeProfit)) CancelOrderDict.Remove(sell_sl.TakeProfit.OrderId); //удаляем слинкованный TP из памяти
+                                if (book.SellTPs.Remove(sell_sl.TakeProfit)) //удаляем слинкованный TP из памяти
+                                {
+                                    CancelOrderDict.Remove(sell_sl.TakeProfit.OrderId);
+                                    sell_sl.TakeProfit = null;
+                                }
                             }
                             if (sell_sl.TrailingStop != null)
                             {
-                                if (book.SellTSs.Remove(sell_sl.TrailingStop)) CancelOrderDict.Remove(sell_sl.TrailingStop.OrderId); //удаляем слинкованный TS из памяти
+                                if (book.SellTSs.Remove(sell_sl.TrailingStop)) //удаляем слинкованный TS из памяти
+                                {
+                                    CancelOrderDict.Remove(sell_sl.TrailingStop.OrderId);
+                                    sell_sl.TrailingStop = null;
+                                }
                             }
 
                             sell_sl.Rate = market_rate; //присвоение рыночной цены
@@ -1513,7 +1521,7 @@ namespace CoreCX.Trading
                 if (book.ActiveSellOrders.Count > 0)
                 {
                     Order buy_sl = book.BuySLs[i];
-                    if (book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate >= buy_sl.Rate) //сравнение с рыночным курсом на продажу (стоп-лосс будет на покупку)
+                    if (book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate >= buy_sl.Rate) //сравнение с рыночным курсом на продажу (SL будет на покупку)
                     {
                         //создаём рыночную заявку на покупку по рынку
                         Account acc = Accounts[buy_sl.UserId];
@@ -1544,11 +1552,19 @@ namespace CoreCX.Trading
                             book.BuySLs.RemoveAt(i); //удаляем SL из памяти
                             if (buy_sl.TakeProfit != null)
                             {
-                                if (book.BuyTPs.Remove(buy_sl.TakeProfit)) CancelOrderDict.Remove(buy_sl.TakeProfit.OrderId); //удаляем слинкованный TP из памяти
+                                if (book.BuyTPs.Remove(buy_sl.TakeProfit)) //удаляем слинкованный TP из памяти
+                                {
+                                    CancelOrderDict.Remove(buy_sl.TakeProfit.OrderId);
+                                    buy_sl.TakeProfit = null;
+                                }
                             }
                             if (buy_sl.TrailingStop != null)
                             {
-                                if (book.BuyTSs.Remove(buy_sl.TrailingStop)) CancelOrderDict.Remove(buy_sl.TrailingStop.OrderId); //удаляем слинкованный TS из памяти
+                                if (book.BuyTSs.Remove(buy_sl.TrailingStop)) //удаляем слинкованный TS из памяти
+                                {
+                                    CancelOrderDict.Remove(buy_sl.TrailingStop.OrderId);
+                                    buy_sl.TrailingStop = null;
+                                }
                             }
 
                             buy_sl.Rate = market_rate;
@@ -1611,11 +1627,19 @@ namespace CoreCX.Trading
                             book.SellTPs.RemoveAt(i); //удаляем TP из памяти
                             if (sell_tp.StopLoss != null)
                             {
-                                if (book.SellSLs.Remove(sell_tp.StopLoss)) CancelOrderDict.Remove(sell_tp.StopLoss.OrderId); //удаляем слинкованный SL из памяти
+                                if (book.SellSLs.Remove(sell_tp.StopLoss)) //удаляем слинкованный SL из памяти
+                                {
+                                    CancelOrderDict.Remove(sell_tp.StopLoss.OrderId);
+                                    sell_tp.StopLoss = null;
+                                }
                             }
                             if (sell_tp.TrailingStop != null)
                             {
-                                if (book.SellTSs.Remove(sell_tp.TrailingStop)) CancelOrderDict.Remove(sell_tp.TrailingStop.OrderId); //удаляем слинкованный TS из памяти
+                                if (book.SellTSs.Remove(sell_tp.TrailingStop)) //удаляем слинкованный TS из памяти
+                                {
+                                    CancelOrderDict.Remove(sell_tp.TrailingStop.OrderId);
+                                    sell_tp.TrailingStop = null;
+                                }
                             }
 
                             sell_tp.Rate = market_rate; //присвоение рыночной цены
@@ -1643,7 +1667,7 @@ namespace CoreCX.Trading
                 if (book.ActiveSellOrders.Count > 0)
                 {
                     Order buy_tp = book.BuyTPs[i];
-                    if (book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate <= buy_tp.Rate) //сравнение с рыночным курсом на продажу (стоп-лосс будет на покупку)
+                    if (book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate <= buy_tp.Rate) //сравнение с рыночным курсом на продажу (TP будет на покупку)
                     {
                         //создаём рыночную заявку на покупку по рынку
                         Account acc = Accounts[buy_tp.UserId];
@@ -1674,11 +1698,19 @@ namespace CoreCX.Trading
                             book.BuyTPs.RemoveAt(i); //удаляем TP из памяти
                             if (buy_tp.StopLoss != null)
                             {
-                                if (book.BuySLs.Remove(buy_tp.StopLoss)) CancelOrderDict.Remove(buy_tp.StopLoss.OrderId); //удаляем слинкованный SL из памяти
+                                if (book.BuySLs.Remove(buy_tp.StopLoss)) //удаляем слинкованный SL из памяти
+                                {
+                                    CancelOrderDict.Remove(buy_tp.StopLoss.OrderId); 
+                                    buy_tp.StopLoss = null;
+                                }
                             }
                             if (buy_tp.TrailingStop != null)
                             {
-                                if (book.BuyTSs.Remove(buy_tp.TrailingStop)) CancelOrderDict.Remove(buy_tp.TrailingStop.OrderId); //удаляем слинкованный TS из памяти
+                                if (book.BuyTSs.Remove(buy_tp.TrailingStop)) //удаляем слинкованный TS из памяти
+                                {
+                                    CancelOrderDict.Remove(buy_tp.TrailingStop.OrderId);
+                                    buy_tp.TrailingStop = null;
+                                }
                             }
 
                             buy_tp.Rate = market_rate;
@@ -1720,7 +1752,7 @@ namespace CoreCX.Trading
                     else if (cur_ts_rate == sell_ts.Rate) break; //цена не изменилась
                     else //цена упала => проверяем условие на срабатывание TS
                     {
-                        if (book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1].Rate <= sell_ts.Rate) //сравнение с рыночным курсом на покупку (заявка будет на продажу)
+                        if (book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1].Rate <= sell_ts.Rate) //сравнение с рыночным курсом на покупку (TS будет на продажу)
                         {
                             //создаём рыночную заявку на продажу по рынку
                             Account acc = Accounts[sell_ts.UserId];
@@ -1750,11 +1782,19 @@ namespace CoreCX.Trading
                                 book.SellTSs.RemoveAt(i); //удаляем TS из памяти
                                 if (sell_ts.StopLoss != null)
                                 {
-                                    if (book.SellSLs.Remove(sell_ts.StopLoss)) CancelOrderDict.Remove(sell_ts.StopLoss.OrderId); //удаляем слинкованный SL из памяти
+                                    if (book.SellSLs.Remove(sell_ts.StopLoss)) //удаляем слинкованный SL из памяти
+                                    {
+                                        CancelOrderDict.Remove(sell_ts.StopLoss.OrderId);
+                                        sell_ts.StopLoss = null;
+                                    }
                                 }
                                 if (sell_ts.TakeProfit != null)
                                 {
-                                    if (book.SellTPs.Remove(sell_ts.TakeProfit)) CancelOrderDict.Remove(sell_ts.TakeProfit.OrderId); //удаляем слинкованный TP из памяти
+                                    if (book.SellTPs.Remove(sell_ts.TakeProfit)) //удаляем слинкованный TP из памяти
+                                    {
+                                        CancelOrderDict.Remove(sell_ts.TakeProfit.OrderId);
+                                        sell_ts.TakeProfit = null;
+                                    }
                                 }
 
                                 sell_ts.Rate = market_rate; //присвоение рыночной цены
@@ -1791,7 +1831,7 @@ namespace CoreCX.Trading
                     else if (cur_ts_rate == buy_ts.Rate) break; //цена не изменилась
                     else //цена выросла => проверяем условие на срабатывание TS
                     {
-                        if (book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate >= buy_ts.Rate) //сравнение с рыночным курсом на покупку (заявка будет на покупку)
+                        if (book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate >= buy_ts.Rate) //сравнение с рыночным курсом на покупку (TS будет на покупку)
                         {
                             //создаём рыночную заявку на покупку по рынку
                             Account acc = Accounts[buy_ts.UserId];
@@ -1822,11 +1862,19 @@ namespace CoreCX.Trading
                                 book.BuyTSs.RemoveAt(i); //удаляем TS из памяти
                                 if (buy_ts.StopLoss != null)
                                 {
-                                    if (book.BuySLs.Remove(buy_ts.StopLoss)) CancelOrderDict.Remove(buy_ts.StopLoss.OrderId); //удаляем слинкованный SL из памяти
+                                    if (book.BuySLs.Remove(buy_ts.StopLoss)) //удаляем слинкованный SL из памяти
+                                    {
+                                        CancelOrderDict.Remove(buy_ts.StopLoss.OrderId); 
+                                        buy_ts.StopLoss = null;
+                                    }
                                 }
                                 if (buy_ts.TakeProfit != null)
                                 {
-                                    if (book.BuyTPs.Remove(buy_ts.TakeProfit)) CancelOrderDict.Remove(buy_ts.TakeProfit.OrderId); //удаляем слинкованный TP из памяти
+                                    if (book.BuyTPs.Remove(buy_ts.TakeProfit)) //удаляем слинкованный TP из памяти
+                                    {
+                                        CancelOrderDict.Remove(buy_ts.TakeProfit.OrderId); 
+                                        buy_ts.TakeProfit = null;
+                                    }
                                 }
 
                                 buy_ts.Rate = market_rate; //присвоение рыночной цены

@@ -23,6 +23,8 @@ namespace CoreCX.Trading
             SellSLs = new List<Order>(2000);
             BuyTPs = new List<Order>(2000);
             SellTPs = new List<Order>(2000);
+            BuyTSs = new List<TSOrder>(500);
+            SellTSs = new List<TSOrder>(500);
         }
 
         internal void InsertBuyOrder(Order order)
