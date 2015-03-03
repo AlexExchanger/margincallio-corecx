@@ -8,8 +8,8 @@ namespace CoreCX.Trading
         private static volatile bool manage = new bool();
         private static int mco_interval = 100;
         private static Timer MCO_Timer = new Timer(MCO_Tick, null, mco_interval, Timeout.Infinite);
-        private static int guaranteed_manage_interval = 2000;
-        private static DateTime last_dt_managed = DateTime.Now.AddMilliseconds(guaranteed_manage_interval / 2);
+        private static int guaranteed_manage_interval = 1250;
+        private static DateTime last_dt_managed = new DateTime();
 
         internal static void QueueManageConditionalOrdersExecution()
         {

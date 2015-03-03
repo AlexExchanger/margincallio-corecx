@@ -47,6 +47,21 @@ namespace CoreCX.Trading
             ExternalData = external_data;
             DtMade = DateTime.Now;
         }
+
+        internal Order(Order ord) //конструктор копирования
+        {
+            OrderId = ord.OrderId;
+            UserId = ord.UserId;
+            OriginalAmount = ord.OriginalAmount;
+            ActualAmount = ord.ActualAmount;
+            Rate = ord.Rate;
+            StopLoss = null;
+            TakeProfit = null;
+            TrailingStop = null;
+            FCSource = ord.FCSource;
+            ExternalData = ord.ExternalData;
+            DtMade = ord.DtMade;
+        }
     }
 
     [Serializable]

@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
+using CoreCX.Trading;
 
 namespace CoreCX.Gateways.TCP
 {
@@ -22,11 +24,51 @@ namespace CoreCX.Gateways.TCP
             });
         }
 
-        internal static void ReportExecRes(TcpClient client, long func_call_id, int status_code, decimal available_funds, decimal blocked_funds)
+        internal static void ReportExecRes(TcpClient client, long func_call_id, int status_code, decimal bid, decimal ask)
         {
             ThreadPool.QueueUserWorkItem(delegate
             {
-                SocketIO.Write(client, JsonManager.FormTechJson(func_call_id, status_code, available_funds, blocked_funds));
+                SocketIO.Write(client, JsonManager.FormTechJson(func_call_id, status_code, bid, ask));
+            });
+        }
+
+        internal static void ReportExecRes(TcpClient client, long func_call_id, int status_code, decimal base_af, decimal base_bf, decimal derived_af, decimal derived_bf, decimal fee)
+        {
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                SocketIO.Write(client, JsonManager.FormTechJson(func_call_id, status_code, base_af, base_bf, derived_af, derived_bf, fee));
+            });
+        }
+
+        internal static void ReportExecRes(TcpClient client, long func_call_id, int status_code, decimal max_leverage, decimal level_mc, decimal level_fl, decimal equity, decimal margin, decimal free_margin, decimal margin_level, bool margin_call, bool suspended)
+        {
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                SocketIO.Write(client, JsonManager.FormTechJson(func_call_id, status_code, max_leverage, level_mc, level_fl, equity, margin, free_margin, margin_level, margin_call.ToInt32(), suspended.ToInt32()));
+            });
+        }
+
+        internal static void ReportExecRes(TcpClient client, long func_call_id, int status_code, List<string> strings)
+        {
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                SocketIO.Write(client, JsonManager.FormTechJson(func_call_id, status_code, strings));
+            });
+        }
+
+        internal static void ReportExecRes(TcpClient client, long func_call_id, int status_code, List<Order> buy_limit, List<Order> sell_limit, List<Order> buy_sl, List<Order> sell_sl, List<Order> buy_tp, List<Order> sell_tp, List<TSOrder> buy_ts, List<TSOrder> sell_ts)
+        {
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                SocketIO.Write(client, JsonManager.FormTechJson(func_call_id, status_code, buy_limit, sell_limit, buy_sl, sell_sl, buy_tp, sell_tp, buy_ts, sell_ts));
+            });
+        }
+
+        internal static void ReportExecRes(TcpClient client, long func_call_id, int status_code, List<OrderBuf> bids, List<OrderBuf> asks, decimal bids_vol, decimal asks_vol, int bids_num, int asks_num)
+        {
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                SocketIO.Write(client, JsonManager.FormTechJson(func_call_id, status_code, bids, asks, bids_vol, asks_vol, bids_num, asks_num));
             });
         }
 

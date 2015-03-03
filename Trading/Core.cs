@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 
 namespace CoreCX.Trading
@@ -59,6 +60,9 @@ namespace CoreCX.Trading
             act_sell_buf_max_size = 30;
             act_buy_buf = new List<OrderBuf>(act_buy_buf_max_size);
             act_sell_buf = new List<OrderBuf>(act_sell_buf_max_size);
+
+            MarginManager.QueueManageMarginExecution();
+            CondOrdManager.QueueManageConditionalOrdersExecution();
         }
 
         #endregion
@@ -628,39 +632,64 @@ namespace CoreCX.Trading
             else return StatusCodes.ErrorAccountNotFound;
         }
 
-        //TODO решить с Антоном вопрос насчёт Fee (привязана к derived currency)
-        internal StatusCodes GetAccountBalance(int user_id, string currency, out decimal available_funds, out decimal blocked_funds) //получить баланс торгового счёта в заданной валюте
+        //TODO SetAccountFee
+
+        internal StatusCodes GetAccountBalance(int user_id, string derived_currency, out decimal base_af, out decimal base_bf, out decimal derived_af, out decimal derived_bf, out decimal fee) //получить баланс торгового счёта для заданной пары
         {
-            available_funds = 0m;
-            blocked_funds = 0m;
+            base_af = 0m;
+            base_bf = 0m;
+            derived_af = 0m;
+            derived_bf = 0m;            
+            fee = 0m;
 
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то получаем баланс
             {
-                if (currency == base_currency) //расчёт базовой валюты
+                base_af = acc.BaseCFunds.AvailableFunds;
+                base_bf = acc.BaseCFunds.BlockedFunds;
+
+                DerivedFunds funds;
+                if (acc.DerivedCFunds.TryGetValue(derived_currency, out funds))
                 {
-                    available_funds = acc.BaseCFunds.AvailableFunds;
-                    blocked_funds = acc.BaseCFunds.BlockedFunds;
+                    derived_af = funds.AvailableFunds;
+                    derived_bf = funds.BlockedFunds;
+                    fee = funds.Fee * 100m;
+
                     return StatusCodes.Success;
                 }
-                else //расчёт производной валюты
-                {
-                    DerivedFunds funds;
-                    if (acc.DerivedCFunds.TryGetValue(currency, out funds))
-                    {
-                        available_funds = funds.AvailableFunds;
-                        blocked_funds = funds.BlockedFunds;
-                        return StatusCodes.Success;
-                    }
-                    else return StatusCodes.ErrorCurrencyNotFound;
-                }
+                else return StatusCodes.ErrorCurrencyPairNotFound;
             }
             else return StatusCodes.ErrorAccountNotFound;
         }
 
-        internal StatusCodes GetAccountParameters(int user_id) //получить значения параметров торгового счёта
+        internal StatusCodes GetAccountParameters(int user_id, out decimal max_leverage, out decimal level_mc, out decimal level_fl, out decimal equity, out decimal margin, out decimal free_margin, out decimal margin_level, out bool margin_call, out bool suspended) //получить значения параметров торгового счёта
         {
-            return StatusCodes.Success;
+            max_leverage = 0m;
+            level_mc = 0m;
+            level_fl = 0m;
+            equity = 0m;
+            margin = 0m;
+            free_margin = 0m;
+            margin_level = 0m;
+            margin_call = new bool();
+            suspended = new bool();
+
+            Account acc;
+            if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то получаем параметры
+            {
+                max_leverage = acc.MaxLeverage;
+                level_mc = acc.LevelMC * 100m;
+                level_fl = acc.LevelFL * 100m;
+                equity = acc.Equity;
+                margin = acc.Margin;
+                free_margin = acc.FreeMargin;
+                margin_level = acc.MarginLevel * 100m;
+                margin_call = acc.MarginCall;
+                suspended = acc.Suspended;
+
+                return StatusCodes.Success;
+            }
+            else return StatusCodes.ErrorAccountNotFound;
         }
 
         internal StatusCodes GetWithdrawalLimit(int user_id, string currency, out decimal amount) //получить лимит средств, доступных для вывода
@@ -719,11 +748,98 @@ namespace CoreCX.Trading
             else return StatusCodes.ErrorAccountNotFound;
         }
 
+        internal StatusCodes GetOpenOrders(int user_id, string derived_currency, out List<Order> buy_limit, out List<Order> sell_limit, out List<Order> buy_sl, out List<Order> sell_sl, out List<Order> buy_tp, out List<Order> sell_tp, out List<TSOrder> buy_ts, out List<TSOrder> sell_ts) //получить открытые заявки
+        {
+            buy_limit = new List<Order>();
+            sell_limit = new List<Order>();
+            buy_sl = new List<Order>();
+            sell_sl = new List<Order>();
+            buy_tp = new List<Order>();
+            sell_tp = new List<Order>();
+            buy_ts = new List<TSOrder>();
+            sell_ts = new List<TSOrder>();
+
+            if (Accounts.ContainsKey(user_id)) //если счёт существует, то получаем активные заявки
+            {
+                OrderBook book;
+                if (OrderBooks.TryGetValue(derived_currency, out book)) //проверка на существование стакана
+                {
+                    for (int i = book.ActiveBuyOrders.Count - 1; i >= 0; i--)
+                    {
+                        Order cur_ord = book.ActiveBuyOrders[i];
+                        if (cur_ord.UserId == user_id) //deep clone
+                        {
+                            buy_limit.Add(new Order(cur_ord));
+                        }
+                    }
+                    for (int i = book.ActiveSellOrders.Count - 1; i >= 0; i--)
+                    {
+                        Order cur_ord = book.ActiveSellOrders[i];
+                        if (cur_ord.UserId == user_id) //deep clone
+                        {
+                            sell_limit.Add(new Order(cur_ord));
+                        }
+                    }
+                    for (int i = book.BuySLs.Count - 1; i >= 0; i--)
+                    {
+                        Order cur_ord = book.BuySLs[i];
+                        if (cur_ord.UserId == user_id) //deep clone
+                        {
+                            buy_sl.Add(new Order(cur_ord));
+                        }
+                    }
+                    for (int i = book.SellSLs.Count - 1; i >= 0; i--)
+                    {
+                        Order cur_ord = book.SellSLs[i];
+                        if (cur_ord.UserId == user_id) //deep clone
+                        {
+                            sell_sl.Add(new Order(cur_ord));
+                        }
+                    }
+                    for (int i = book.BuyTPs.Count - 1; i >= 0; i--)
+                    {
+                        Order cur_ord = book.BuyTPs[i];
+                        if (cur_ord.UserId == user_id) //deep clone
+                        {
+                            buy_tp.Add(new Order(cur_ord));
+                        }
+                    }
+                    for (int i = book.SellTPs.Count - 1; i >= 0; i--)
+                    {
+                        Order cur_ord = book.SellTPs[i];
+                        if (cur_ord.UserId == user_id) //deep clone
+                        {
+                            sell_tp.Add(new Order(cur_ord));
+                        }
+                    }
+                    for (int i = book.BuyTSs.Count - 1; i >= 0; i--)
+                    {
+                        TSOrder cur_ord = book.BuyTSs[i];
+                        if (cur_ord.UserId == user_id) //deep clone
+                        {
+                            buy_ts.Add(new TSOrder(cur_ord, cur_ord.Offset));
+                        }
+                    }
+                    for (int i = book.SellTSs.Count - 1; i >= 0; i--)
+                    {
+                        TSOrder cur_ord = book.SellTSs[i];
+                        if (cur_ord.UserId == user_id) //deep clone
+                        {
+                            sell_ts.Add(new TSOrder(cur_ord, cur_ord.Offset));
+                        }
+                    }
+
+                    return StatusCodes.Success;
+                }
+                else return StatusCodes.ErrorCurrencyPairNotFound;
+            }
+            else return StatusCodes.ErrorAccountNotFound;
+        }
 
         #endregion
 
         #region GLOBAL FUNCTIONS
-
+               
         internal StatusCodes CreateCurrencyPair(string derived_currency)
         {
             //реплицировать
@@ -771,6 +887,100 @@ namespace CoreCX.Trading
             //реплицировать
 
             return StatusCodes.Success;
+        }
+
+        internal StatusCodes GetTicker(string derived_currency, out decimal bid, out decimal ask)
+        {
+            bid = 0m;
+            ask = 0m;
+
+            OrderBook book;
+            if (OrderBooks.TryGetValue(derived_currency, out book)) //проверка на существование стакана
+            {
+                if (book.ActiveBuyOrders.Count > 0) bid = book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1].Rate; //bid price
+                if (book.ActiveSellOrders.Count > 0) ask = book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate; //ask price
+
+                return StatusCodes.Success;
+            }
+            else return StatusCodes.ErrorCurrencyPairNotFound;
+        }
+
+        internal StatusCodes GetDepth(string derived_currency, int limit, out List<OrderBuf> bids, out List<OrderBuf> asks, out decimal bids_vol, out decimal asks_vol, out int bids_num, out int asks_num) //получить стаканы
+        {
+            bids = new List<OrderBuf>();
+            asks = new List<OrderBuf>();
+            bids_vol = 0m;
+            asks_vol = 0m;
+            bids_num = 0;
+            asks_num = 0;
+
+            OrderBook book;
+            if (OrderBooks.TryGetValue(derived_currency, out book)) //проверка на существование стакана
+            {
+                if (limit > 0) //проверка на положительность лимита
+                {
+                    //получаем заявки на покупку
+                    if (book.ActiveBuyOrders.Count > 0)
+                    {
+                        decimal accumulated_amount = book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1].ActualAmount;
+                        decimal last_rate = book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1].Rate;
+                        for (int i = book.ActiveBuyOrders.Count - 2; i >= 0; i--)
+                        {
+                            if (book.ActiveBuyOrders[i].Rate == last_rate)
+                            {
+                                accumulated_amount += book.ActiveBuyOrders[i].ActualAmount;
+                            }
+                            else
+                            {
+                                if (bids.Count == limit - 1) break;
+
+                                //добавляем в буфер accumulated_amount и last_rate до их изменения                    
+                                bids.Add(new OrderBuf(accumulated_amount, last_rate));
+
+                                Order buy_ord = book.ActiveBuyOrders[i];
+                                accumulated_amount = buy_ord.ActualAmount;
+                                last_rate = buy_ord.Rate;
+                            }
+                        }
+                        bids.Add(new OrderBuf(accumulated_amount, last_rate));
+                    }
+
+                    //получаем заявки на продажу
+                    if (book.ActiveSellOrders.Count > 0)
+                    {
+                        decimal accumulated_amount = book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].ActualAmount;
+                        decimal last_rate = book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate;
+                        for (int i = book.ActiveSellOrders.Count - 2; i >= 0; i--)
+                        {
+                            if (book.ActiveSellOrders[i].Rate == last_rate)
+                            {
+                                accumulated_amount += book.ActiveSellOrders[i].ActualAmount;
+                            }
+                            else
+                            {
+                                if (asks.Count == limit - 1) break;
+
+                                //добавляем в буфер accumulated_amount и last_rate до их изменения                    
+                                asks.Add(new OrderBuf(accumulated_amount, last_rate));
+
+                                Order sell_ord = book.ActiveSellOrders[i];
+                                accumulated_amount = sell_ord.ActualAmount;
+                                last_rate = sell_ord.Rate;
+                            }
+                        }
+                        asks.Add(new OrderBuf(accumulated_amount, last_rate));
+                    }
+
+                    bids_vol = book.ActiveBuyOrders.Sum(item => item.ActualAmount * item.Rate); //bids' volume (в базовой валюте)
+                    asks_vol = book.ActiveSellOrders.Sum(item => item.ActualAmount); //asks' volume (в производной валюте) 
+                    bids_num = book.ActiveBuyOrders.Count; //bids' num                       
+                    asks_num = book.ActiveSellOrders.Count; //asks' num
+
+                    return StatusCodes.Success;
+                }
+                else return StatusCodes.ErrorNegativeOrZeroLimit;
+            }
+            else return StatusCodes.ErrorCurrencyPairNotFound;
         }
         
         #endregion

@@ -15,11 +15,18 @@ namespace CoreCX
         SetAccountFee = 1000,
 
         GetAccountBalance = 2400,
-        GetWithdrawalLimit = 2500, 
-        GetOrderInfo = 2600,
+        GetAccountParameters = 2500,
+        GetWithdrawalLimit = 2600,
         GetOpenOrders = 2700,
-        GetTicker = 2800,
-        GetDepth = 2900
+        GetOrderInfo = 2800,
+        
+        CreateCurrencyPair = 5000,
+        GetCurrencyPairs = 5100,
+        GetDerivedCurrencies = 5200,
+        DeleteCurrencyPair = 5300,
+
+        GetTicker = 7000,
+        GetDepth = 7100
     }
 
     internal enum MarketClosedForbiddenFuncIds

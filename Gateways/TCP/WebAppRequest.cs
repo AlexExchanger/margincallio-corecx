@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
+using CoreCX.Trading;
 
 namespace CoreCX.Gateways.TCP
 {
@@ -208,17 +210,17 @@ namespace CoreCX.Gateways.TCP
                         }
                     }
 
-                case (int)FuncIds.GetAccountBalance: //получить баланс торгового счёта в заданной валюте
+                case (int)FuncIds.GetAccountBalance: //получить баланс торгового счёта для заданной пары
                     {
                         int user_id;
-                        decimal available_funds, blocked_funds;
+                        decimal base_af, base_bf, derived_af, derived_bf, fee;
                         if (int.TryParse(str_args[0], out user_id) && !String.IsNullOrEmpty(str_args[1]))
                         {
                             call = new FuncCall();
                             call.Action = () =>
                             {
-                                StatusCodes status = App.core.GetAccountBalance(user_id, str_args[1], out available_funds, out blocked_funds);
-                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, available_funds, blocked_funds);
+                                StatusCodes status = App.core.GetAccountBalance(user_id, str_args[1], out base_af, out base_bf, out derived_af, out derived_bf, out fee);
+                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, base_af, base_bf, derived_af, derived_bf, fee);
                             };
                             Console.WriteLine("To queue core.GetAccountBalance(" + str_args[0] + ", " + str_args[1] + ")");
                             break;
@@ -230,10 +232,28 @@ namespace CoreCX.Gateways.TCP
                         }
                     }
 
-
-                    //TODO GetAccountParameters
-
-
+                case (int)FuncIds.GetAccountParameters: //получить значения параметров торгового счёта
+                    {
+                        int user_id;
+                        decimal max_leverage, level_mc, level_fl, equity, margin, free_margin, margin_level;
+                        bool margin_call, suspended;
+                        if (int.TryParse(str_args[0], out user_id))
+                        {
+                            call = new FuncCall();
+                            call.Action = () =>
+                            {
+                                StatusCodes status = App.core.GetAccountParameters(user_id, out max_leverage, out level_mc, out level_fl, out equity, out margin, out free_margin, out margin_level, out margin_call, out suspended);
+                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, max_leverage, level_mc, level_fl, equity, margin, free_margin, margin_level, margin_call, suspended);
+                            };
+                            Console.WriteLine("To queue core.GetAccountParameters(" + str_args[0] + ")");
+                            break;
+                        }
+                        else
+                        {
+                            WebAppResponse.RejectInvalidFuncArgs(client);
+                            return;
+                        }
+                    }
 
                 case (int)FuncIds.GetWithdrawalLimit: //получить лимит средств, доступных для вывода
                     {
@@ -257,9 +277,123 @@ namespace CoreCX.Gateways.TCP
                         }
                     }
 
+                case (int)FuncIds.GetOpenOrders: //получить открытые заявки
+                    {
+                        int user_id;
+                        List<Order> buy_limit, sell_limit, buy_sl, sell_sl, buy_tp, sell_tp;
+                        List<TSOrder> buy_ts, sell_ts;
+                        if (int.TryParse(str_args[0], out user_id) && !String.IsNullOrEmpty(str_args[1]))
+                        {
+                            call = new FuncCall();
+                            call.Action = () =>
+                            {
+                                StatusCodes status = App.core.GetOpenOrders(user_id, str_args[1], out buy_limit, out sell_limit, out buy_sl, out sell_sl, out buy_tp, out sell_tp, out buy_ts, out sell_ts);
+                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, buy_limit, sell_limit, buy_sl, sell_sl, buy_tp, sell_tp, buy_ts, sell_ts);
+                            };
+                            Console.WriteLine("To queue core.GetOpenOrders(" + str_args[0] + ", " + str_args[1] + ")");
+                            break;
+                        }
+                        else
+                        {
+                            WebAppResponse.RejectInvalidFuncArgs(client);
+                            return;
+                        }
+                    }
+
+                    //TODO GetOrderInfo
 
 
+                case (int)FuncIds.CreateCurrencyPair:
+                    {
+                        if (!String.IsNullOrEmpty(str_args[0]))
+                        {
+                            call = new FuncCall();
+                            call.Action = () =>
+                            {
+                                StatusCodes status = App.core.CreateCurrencyPair(str_args[0]);
+                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
+                            };
+                            Console.WriteLine("To queue core.CreateCurrencyPair(" + str_args[0] + ")");
+                            break;
+                        }
+                        else
+                        {
+                            WebAppResponse.RejectInvalidFuncArgs(client);
+                            return;
+                        }
+                    }
 
+                case (int)FuncIds.GetCurrencyPairs:
+                    {
+                        List<string> currency_pairs;
+                        call = new FuncCall();
+                        call.Action = () =>
+                        {
+                            StatusCodes status = App.core.GetCurrencyPairs(out currency_pairs);
+                            WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, currency_pairs);
+                        };
+                        Console.WriteLine("To queue core.GetCurrencyPairs()");
+                        break;                    
+                    }
+
+                case (int)FuncIds.GetDerivedCurrencies:
+                    {
+                        List<string> derived_currencies;
+                        call = new FuncCall();
+                        call.Action = () =>
+                        {
+                            StatusCodes status = App.core.GetCurrencyPairs(out derived_currencies);
+                            WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, derived_currencies);
+                        };
+                        Console.WriteLine("To queue core.GetDerivedCurrencies()");
+                        break;
+                    }
+
+                    //TODO DeleteCurrencyPair
+
+                case (int)FuncIds.GetTicker:
+                    {
+                        decimal bid, ask;
+                        if (!String.IsNullOrEmpty(str_args[0]))
+                        {
+                            call = new FuncCall();
+                            call.Action = () =>
+                            {
+                                StatusCodes status = App.core.GetTicker(str_args[0], out bid, out ask);
+                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, bid, ask);
+                            };
+                            Console.WriteLine("To queue core.GetTicker(" + str_args[0] + ")");
+                            break;
+                        }
+                        else
+                        {
+                            WebAppResponse.RejectInvalidFuncArgs(client);
+                            return;
+                        }
+                    }
+
+                case (int)FuncIds.GetDepth:
+                    {
+                        int limit, bids_num, asks_num;                        
+                        decimal bids_vol, asks_vol;
+                        List<OrderBuf> bids, asks;
+                        if (!String.IsNullOrEmpty(str_args[0]) && int.TryParse(str_args[1], out limit))
+                        {
+                            call = new FuncCall();
+                            call.Action = () =>
+                            {
+                                StatusCodes status = App.core.GetDepth(str_args[0], limit, out bids, out asks, out bids_vol, out asks_vol, out bids_num, out asks_num);
+                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, bids, asks, bids_vol, asks_vol, bids_num, asks_num);
+                            };
+                            Console.WriteLine("To queue core.GetDepth(" + str_args[0] + ", " + str_args[1] + ")");
+                            break;
+                        }
+                        else
+                        {
+                            WebAppResponse.RejectInvalidFuncArgs(client);
+                            return;
+                        }
+                    }
 
 
 

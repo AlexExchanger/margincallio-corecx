@@ -12,5 +12,10 @@ namespace CoreCX.Trading
         {
             Offset = offset;
         }
+
+        internal TSOrder(Order ord, decimal offset) : base(ord) //конструктор копирования
+        {
+            Offset = offset;
+        }
     }
 }
