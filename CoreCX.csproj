@@ -55,6 +55,9 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="FuncCall.cs" />
     <Compile Include="Gateways\TCP\JsonManager.cs" />
+    <Compile Include="Gateways\TCP\Messages\BalanceMsg.cs" />
+    <Compile Include="Gateways\TCP\Messages\IJsonSerializable.cs" />
+    <Compile Include="Gateways\TCP\Pusher.cs" />
     <Compile Include="Gateways\TCP\SocketIO.cs" />
     <Compile Include="Gateways\TCP\TcpServer.cs" />
     <Compile Include="Gateways\TCP\WebAppRequest.cs" />

@@ -342,7 +342,7 @@ namespace CoreCX.Gateways.TCP
                         call = new FuncCall();
                         call.Action = () =>
                         {
-                            StatusCodes status = App.core.GetCurrencyPairs(out derived_currencies);
+                            StatusCodes status = App.core.GetDerivedCurrencies(out derived_currencies);
                             WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, derived_currencies);
                         };
                         Console.WriteLine("To queue core.GetDerivedCurrencies()");

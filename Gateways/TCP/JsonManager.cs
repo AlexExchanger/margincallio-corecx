@@ -459,7 +459,35 @@ namespace CoreCX.Gateways.TCP
 
         #endregion
 
-        
+        #region DAEMON PUSH MESSAGES
+
+        internal static string FormTechJson(int message_type, int user_id, string currency, decimal available_funds, decimal blocked_funds, DateTime dt_made)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter sw = new StringWriter(sb);
+
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("0");
+                writer.WriteValue(message_type);
+                writer.WritePropertyName("1");
+                writer.WriteValue(user_id);
+                writer.WritePropertyName("2");
+                writer.WriteValue(currency);
+                writer.WritePropertyName("3");
+                writer.WriteValue(available_funds);
+                writer.WritePropertyName("4");
+                writer.WriteValue(blocked_funds);
+                writer.WritePropertyName("5");
+                writer.WriteValue(dt_made.Ticks);
+                writer.WriteEndObject();
+            }
+
+            return sb.ToString();
+        }
+
+        #endregion
 
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using CoreCX.Gateways.TCP;
 
 namespace CoreCX.Trading
 {
@@ -163,7 +164,7 @@ namespace CoreCX.Trading
                     if (currency == base_currency) //пополнение базовой валюты
                     {
                         acc.BaseCFunds.AvailableFunds += amount;
-                        //Pusher.NewBalance(user_id, currency, available_funds, blocked_funds, DateTime.Now); //сообщение о новом балансе
+                        Pusher.NewBalance(user_id, currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
                         return StatusCodes.Success;
                     }
                     else //пополнение производной валюты
@@ -172,7 +173,7 @@ namespace CoreCX.Trading
                         if (acc.DerivedCFunds.TryGetValue(currency, out funds))
                         {
                             funds.AvailableFunds += amount;
-                            //Pusher.NewBalance(user_id, currency, available_funds, blocked_funds, DateTime.Now); //сообщение о новом балансе
+                            Pusher.NewBalance(user_id, currency, funds.AvailableFunds, funds.BlockedFunds); //сообщение о новом балансе
                             return StatusCodes.Success;
                         }
                         else return StatusCodes.ErrorCurrencyNotFound;
@@ -203,7 +204,7 @@ namespace CoreCX.Trading
                             if (margin_pars[2] >= amount)
                             {
                                 acc.BaseCFunds.AvailableFunds -= amount;
-                                //Pusher.NewBalance(user_id, currency, available_funds, blocked_funds, DateTime.Now); //сообщение о новом балансе
+                                Pusher.NewBalance(user_id, currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
                                 return StatusCodes.Success;
                             }
                             else return StatusCodes.ErrorInsufficientFunds;
@@ -235,7 +236,7 @@ namespace CoreCX.Trading
                                 if (accumulated_amount >= amount)
                                 {
                                     funds.AvailableFunds -= amount;
-                                    //Pusher.NewBalance(user_id, currency, available_funds, blocked_funds, DateTime.Now); //сообщение о новом балансе
+                                    Pusher.NewBalance(user_id, currency, funds.AvailableFunds, funds.BlockedFunds); //сообщение о новом балансе
                                     return StatusCodes.Success;
                                 }
                                 else return StatusCodes.ErrorInsufficientFunds;
@@ -432,7 +433,7 @@ namespace CoreCX.Trading
                                         decimal total = buy_order.ActualAmount * buy_order.Rate;
                                         acc.BaseCFunds.BlockedFunds -= total;
                                         acc.BaseCFunds.AvailableFunds += total;
-                                        //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                                        Pusher.NewBalance(user_id, base_currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
                                         
                                         //if (UpdTicker()) Pusher.NewTicker(bid_buf, ask_buf, DateTime.Now); //сообщение о новом тикере
                                         //if (UpdActiveBuyTop()) Pusher.NewActiveBuyTop(act_buy_buf, DateTime.Now); //сообщение о новом топе стакана на покупку
@@ -493,7 +494,7 @@ namespace CoreCX.Trading
                                         DerivedFunds derived_funds = acc.DerivedCFunds[ord_canc_data.DerivedCurrency];
                                         derived_funds.BlockedFunds -= sell_order.ActualAmount;
                                         derived_funds.AvailableFunds += sell_order.ActualAmount;
-                                        //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                                        Pusher.NewBalance(user_id, ord_canc_data.DerivedCurrency, derived_funds.AvailableFunds, derived_funds.BlockedFunds); //сообщение о новом балансе
 
                                         //if (UpdTicker()) Pusher.NewTicker(bid_buf, ask_buf, DateTime.Now); //сообщение о новом тикере
                                         //if (UpdActiveBuyTop()) Pusher.NewActiveBuyTop(act_buy_buf, DateTime.Now); //сообщение о новом топе стакана на покупку
@@ -633,6 +634,8 @@ namespace CoreCX.Trading
         }
 
         //TODO SetAccountFee
+
+        //TODO GetAccountFee
 
         internal StatusCodes GetAccountBalance(int user_id, string derived_currency, out decimal base_af, out decimal base_bf, out decimal derived_af, out decimal derived_bf, out decimal fee) //получить баланс торгового счёта для заданной пары
         {
@@ -1051,7 +1054,7 @@ namespace CoreCX.Trading
                     {
                         acc.BaseCFunds.AvailableFunds -= total; //снимаем средства с доступных средств
                         acc.BaseCFunds.BlockedFunds += total; //блокируем средства в заявке на покупку
-                        //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                        Pusher.NewBalance(user_id, base_currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
                         
                         Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
                         book.InsertBuyOrder(order);
@@ -1101,8 +1104,8 @@ namespace CoreCX.Trading
                         {
                             if (!Debitors.ContainsKey(user_id)) Debitors.Add(user_id, acc); //добавление юзера в словарь дебиторов
                             acc.BaseCFunds.AvailableFunds -= total; //снимаем средства с доступных средств
-                            acc.BaseCFunds.BlockedFunds += total; //блокируем средства в заявке на покупку                            
-                            //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                            acc.BaseCFunds.BlockedFunds += total; //блокируем средства в заявке на покупку
+                            Pusher.NewBalance(user_id, base_currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
 
                             Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
                             book.InsertBuyOrder(order);
@@ -1198,7 +1201,7 @@ namespace CoreCX.Trading
                     {
                         derived_funds.AvailableFunds -= amount; //снимаем средства с доступных средств
                         derived_funds.BlockedFunds += amount; //блокируем средства в заявке на продажу
-                        //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                        Pusher.NewBalance(user_id, derived_currency, derived_funds.AvailableFunds, derived_funds.BlockedFunds); //сообщение о новом балансе
 
                         Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
                         book.InsertSellOrder(order);
@@ -1249,7 +1252,7 @@ namespace CoreCX.Trading
                             if (!Debitors.ContainsKey(user_id)) Debitors.Add(user_id, acc); //добавление юзера в словарь дебиторов
                             derived_funds.AvailableFunds -= amount; //снимаем средства с доступных средств
                             derived_funds.BlockedFunds += amount; //блокируем средства в заявке на продажу
-                            //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                            Pusher.NewBalance(user_id, derived_currency, derived_funds.AvailableFunds, derived_funds.BlockedFunds); //сообщение о новом балансе
 
                             Order order = new Order(user_id, amount, amount, rate, fc_source, external_data);
                             book.InsertSellOrder(order);
@@ -1346,13 +1349,15 @@ namespace CoreCX.Trading
                     //начисляем продавцу сумму минус комиссия
                     seller_derived_funds.BlockedFunds -= sell_ord.ActualAmount;
                     seller.BaseCFunds.AvailableFunds += sell_ord.ActualAmount * trade_rate * (1m - seller_derived_funds.Fee);
-                    //Pusher.NewBalance(sell_ord.UserId, seller, DateTime.Now); //сообщение о новом балансе
+                    Pusher.NewBalance(sell_ord.UserId, base_currency, seller.BaseCFunds.AvailableFunds, seller.BaseCFunds.BlockedFunds); //сообщение о новом балансе
+                    Pusher.NewBalance(sell_ord.UserId, derived_currency, seller_derived_funds.AvailableFunds, seller_derived_funds.BlockedFunds); //сообщение о новом балансе
 
                     //начисляем покупателю сумму минус комиссия плюс разницу
                     buyer.BaseCFunds.BlockedFunds -= sell_ord.ActualAmount * buy_ord.Rate;
                     buyer_derived_funds.AvailableFunds += sell_ord.ActualAmount * (1m - buyer_derived_funds.Fee);
                     buyer.BaseCFunds.AvailableFunds += sell_ord.ActualAmount * (buy_ord.Rate - trade_rate);
-                    //Pusher.NewBalance(buy_ord.UserId, buyer, DateTime.Now); //сообщение о новом балансе
+                    Pusher.NewBalance(buy_ord.UserId, base_currency, buyer.BaseCFunds.AvailableFunds, buyer.BaseCFunds.BlockedFunds); //сообщение о новом балансе
+                    Pusher.NewBalance(buy_ord.UserId, derived_currency, buyer_derived_funds.AvailableFunds, buyer_derived_funds.BlockedFunds); //сообщение о новом балансе
 
                     //увеличивается ActualAmount привязанных к buy-заявке SL/TP/TS заявок
                     if (buy_ord.StopLoss != null) buy_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
@@ -1394,13 +1399,15 @@ namespace CoreCX.Trading
                     //начисляем продавцу сумму минус комиссия
                     seller_derived_funds.BlockedFunds -= buy_ord.ActualAmount;
                     seller.BaseCFunds.AvailableFunds += buy_ord.ActualAmount * trade_rate * (1m - seller_derived_funds.Fee);
-                    //Pusher.NewBalance(sell_ord.UserId, seller, DateTime.Now); //сообщение о новом балансе
+                    Pusher.NewBalance(sell_ord.UserId, base_currency, seller.BaseCFunds.AvailableFunds, seller.BaseCFunds.BlockedFunds); //сообщение о новом балансе
+                    Pusher.NewBalance(sell_ord.UserId, derived_currency, seller_derived_funds.AvailableFunds, seller_derived_funds.BlockedFunds); //сообщение о новом балансе
 
                     //начисляем покупателю сумму минус комиссия плюс разницу
                     buyer.BaseCFunds.BlockedFunds -= buy_ord.ActualAmount * buy_ord.Rate;
                     buyer_derived_funds.AvailableFunds += buy_ord.ActualAmount * (1m - buyer_derived_funds.Fee);
                     buyer.BaseCFunds.AvailableFunds += buy_ord.ActualAmount * (buy_ord.Rate - trade_rate);
-                    //Pusher.NewBalance(buy_ord.UserId, buyer, DateTime.Now); //сообщение о новом балансе
+                    Pusher.NewBalance(buy_ord.UserId, base_currency, buyer.BaseCFunds.AvailableFunds, buyer.BaseCFunds.BlockedFunds); //сообщение о новом балансе
+                    Pusher.NewBalance(buy_ord.UserId, derived_currency, buyer_derived_funds.AvailableFunds, buyer_derived_funds.BlockedFunds); //сообщение о новом балансе
 
                     //увеличивается ActualAmount привязанных к sell-заявке SL/TP/TS заявок
                     if (sell_ord.StopLoss != null) sell_ord.StopLoss.ActualAmount += buy_ord.ActualAmount;
@@ -1442,13 +1449,15 @@ namespace CoreCX.Trading
                     //начисляем продавцу сумму минус комиссия
                     seller_derived_funds.BlockedFunds -= buy_ord.ActualAmount;
                     seller.BaseCFunds.AvailableFunds += buy_ord.ActualAmount * trade_rate * (1m - seller_derived_funds.Fee);
-                    //Pusher.NewBalance(sell_ord.UserId, seller, DateTime.Now); //сообщение о новом балансе
+                    Pusher.NewBalance(sell_ord.UserId, base_currency, seller.BaseCFunds.AvailableFunds, seller.BaseCFunds.BlockedFunds); //сообщение о новом балансе
+                    Pusher.NewBalance(sell_ord.UserId, derived_currency, seller_derived_funds.AvailableFunds, seller_derived_funds.BlockedFunds); //сообщение о новом балансе
 
                     //начисляем покупателю сумму минус комиссия плюс разницу
                     buyer.BaseCFunds.BlockedFunds -= buy_ord.ActualAmount * buy_ord.Rate;
                     buyer_derived_funds.AvailableFunds += buy_ord.ActualAmount * (1m - buyer_derived_funds.Fee);
                     buyer.BaseCFunds.AvailableFunds += buy_ord.ActualAmount * (buy_ord.Rate - trade_rate);
-                    //Pusher.NewBalance(buy_ord.UserId, buyer, DateTime.Now); //сообщение о новом балансе
+                    Pusher.NewBalance(buy_ord.UserId, base_currency, buyer.BaseCFunds.AvailableFunds, buyer.BaseCFunds.BlockedFunds); //сообщение о новом балансе
+                    Pusher.NewBalance(buy_ord.UserId, derived_currency, buyer_derived_funds.AvailableFunds, buyer_derived_funds.BlockedFunds); //сообщение о новом балансе
 
                     //увеличивается ActualAmount привязанных к buy-заявке SL/TP/TS заявок
                     if (buy_ord.StopLoss != null) buy_ord.StopLoss.ActualAmount += buy_ord.ActualAmount;
@@ -1589,8 +1598,8 @@ namespace CoreCX.Trading
                     if (!fl_side) //заявка на покупку
                     {
                         acc.Value.BaseCFunds.AvailableFunds -= fl_sum; //снимаем средства с доступных средств
-                        acc.Value.BaseCFunds.BlockedFunds += fl_sum; //блокируем средства в заявке на покупку                            
-                        //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                        acc.Value.BaseCFunds.BlockedFunds += fl_sum; //блокируем средства в заявке на покупку
+                        Pusher.NewBalance(acc.Key, base_currency, acc.Value.BaseCFunds.AvailableFunds, acc.Value.BaseCFunds.BlockedFunds); //сообщение о новом балансе
 
                         Order order = new Order(acc.Key, fl_amount, fl_amount, fl_market_rate);
                         fl_book.InsertBuyOrder(order);
@@ -1606,7 +1615,7 @@ namespace CoreCX.Trading
                         DerivedFunds derived_funds = acc.Value.DerivedCFunds[fl_derived_currency];
                         derived_funds.AvailableFunds -= fl_amount; //снимаем средства с доступных средств
                         derived_funds.BlockedFunds += fl_amount; //блокируем средства в заявке на продажу
-                        //Pusher.NewBalance(user_id, acc, DateTime.Now); //сообщение о новом балансе
+                        Pusher.NewBalance(acc.Key, fl_derived_currency, derived_funds.AvailableFunds, derived_funds.BlockedFunds); //сообщение о новом балансе
 
                         Order order = new Order(acc.Key, fl_amount, fl_amount, fl_market_rate);
                         fl_book.InsertSellOrder(order);
@@ -1720,7 +1729,8 @@ namespace CoreCX.Trading
                         {
                             derived_funds.AvailableFunds -= sell_sl.ActualAmount; //снимаем средства с доступных средств
                             derived_funds.BlockedFunds += sell_sl.ActualAmount; //блокируем средства в заявке на продажу
-                            //Pusher.NewBalance(sell_sl.UserId, acc, DateTime.Now); //сообщение о новом балансе
+                            Pusher.NewBalance(sell_sl.UserId, derived_currency, derived_funds.AvailableFunds, derived_funds.BlockedFunds); //сообщение о новом балансе
+
                                                         
                             book.SellSLs.RemoveAt(i); //удаляем SL из памяти
                             if (sell_sl.TakeProfit != null)
@@ -1791,7 +1801,7 @@ namespace CoreCX.Trading
                         {
                             acc.BaseCFunds.AvailableFunds -= total; //снимаем средства с доступных средств
                             acc.BaseCFunds.BlockedFunds += total; //блокируем средства в заявке на продажу
-                            //Pusher.NewBalance(buy_sl.UserId, acc, DateTime.Now); //сообщение о новом балансе
+                            Pusher.NewBalance(buy_sl.UserId, base_currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
 
                             book.BuySLs.RemoveAt(i); //удаляем SL из памяти
                             if (buy_sl.TakeProfit != null)
@@ -1866,7 +1876,7 @@ namespace CoreCX.Trading
                         {
                             derived_funds.AvailableFunds -= sell_tp.ActualAmount; //снимаем средства с доступных средств
                             derived_funds.BlockedFunds += sell_tp.ActualAmount; //блокируем средства в заявке на продажу
-                            //Pusher.NewBalance(sell_tp.UserId, acc, DateTime.Now); //сообщение о новом балансе
+                            Pusher.NewBalance(sell_tp.UserId, derived_currency, derived_funds.AvailableFunds, derived_funds.BlockedFunds); //сообщение о новом балансе
 
                             book.SellTPs.RemoveAt(i); //удаляем TP из памяти
                             if (sell_tp.StopLoss != null)
@@ -1937,7 +1947,7 @@ namespace CoreCX.Trading
                         {
                             acc.BaseCFunds.AvailableFunds -= total; //снимаем средства с доступных средств
                             acc.BaseCFunds.BlockedFunds += total; //блокируем средства в заявке на продажу
-                            //Pusher.NewBalance(buy_tp.UserId, acc, DateTime.Now); //сообщение о новом балансе
+                            Pusher.NewBalance(buy_tp.UserId, base_currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
 
                             book.BuyTPs.RemoveAt(i); //удаляем TP из памяти
                             if (buy_tp.StopLoss != null)
@@ -2021,8 +2031,8 @@ namespace CoreCX.Trading
                             {
                                 derived_funds.AvailableFunds -= sell_ts.ActualAmount; //снимаем средства с доступных средств
                                 derived_funds.BlockedFunds += sell_ts.ActualAmount; //блокируем средства в заявке на продажу
-                                //Pusher.NewBalance(sell_ts.UserId, acc, DateTime.Now); //сообщение о новом балансе
-
+                                Pusher.NewBalance(sell_ts.UserId, derived_currency, derived_funds.AvailableFunds, derived_funds.BlockedFunds); //сообщение о новом балансе
+                                
                                 book.SellTSs.RemoveAt(i); //удаляем TS из памяти
                                 if (sell_ts.StopLoss != null)
                                 {
@@ -2101,7 +2111,7 @@ namespace CoreCX.Trading
                             {
                                 acc.BaseCFunds.AvailableFunds -= total; //снимаем средства с доступных средств
                                 acc.BaseCFunds.BlockedFunds += total; //блокируем средства в заявке на продажу
-                                //Pusher.NewBalance(buy_ts.UserId, acc, DateTime.Now); //сообщение о новом балансе
+                                Pusher.NewBalance(buy_ts.UserId, base_currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
 
                                 book.BuyTSs.RemoveAt(i); //удаляем TS из памяти
                                 if (buy_ts.StopLoss != null)
