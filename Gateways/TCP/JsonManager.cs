@@ -515,6 +515,26 @@ namespace CoreCX.Gateways.TCP
             return sb.ToString();
         }
 
+        internal static string FormTechJson(int message_type, int user_id, DateTime dt_made)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter sw = new StringWriter(sb);
+
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("0");
+                writer.WriteValue(message_type);
+                writer.WritePropertyName("1");
+                writer.WriteValue(user_id);
+                writer.WritePropertyName("2");
+                writer.WriteValue(dt_made.Ticks);
+                writer.WriteEndObject();
+            }
+
+            return sb.ToString();
+        }
+
         internal static string FormTechJson(int message_type, string derived_currency, decimal bid, decimal ask, DateTime dt_made)
         {
             StringBuilder sb = new StringBuilder();
@@ -539,16 +559,7 @@ namespace CoreCX.Gateways.TCP
             return sb.ToString();
         }
 
-
-
-
-
-
-
-
-
-
-        internal static string FormTechJson(int message_type, int user_id, DateTime dt_made)
+        internal static string FormTechJson(int message_type, string derived_currency, bool side, List<OrderBuf> act_top, DateTime dt_made)
         {
             StringBuilder sb = new StringBuilder();
             StringWriter sw = new StringWriter(sb);
@@ -559,8 +570,20 @@ namespace CoreCX.Gateways.TCP
                 writer.WritePropertyName("0");
                 writer.WriteValue(message_type);
                 writer.WritePropertyName("1");
-                writer.WriteValue(user_id);
+                writer.WriteValue(derived_currency);
                 writer.WritePropertyName("2");
+                writer.WriteValue(side.ToInt32());
+                writer.WritePropertyName("3");
+                writer.WriteStartArray();
+                for (int i = 0; i < act_top.Count; i++)
+                {
+                    writer.WriteStartArray();
+                    writer.WriteValue(act_top[i].ActualAmount);
+                    writer.WriteValue(act_top[i].Rate);
+                    writer.WriteEndArray();
+                }
+                writer.WriteEndArray();
+                writer.WritePropertyName("4");
                 writer.WriteValue(dt_made.Ticks);
                 writer.WriteEndObject();
             }
@@ -568,7 +591,72 @@ namespace CoreCX.Gateways.TCP
             return sb.ToString();
         }
 
-        
+
+
+
+
+
+        internal static string FormTechJson(int message_type, long order_id, int user_id, int order_status, DateTime dt_made)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter sw = new StringWriter(sb);
+
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("0");
+                writer.WriteValue(message_type);
+                writer.WritePropertyName("1");
+                writer.WriteValue(order_id);
+                writer.WritePropertyName("2");
+                writer.WriteValue(user_id);
+                writer.WritePropertyName("3");
+                writer.WriteValue(order_status);
+                writer.WritePropertyName("4");
+                writer.WriteValue(dt_made.Ticks);
+                writer.WriteEndObject();
+            }
+
+            return sb.ToString();
+        }
+
+        internal static string FormTechJson(int message_type, Trade trade)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter sw = new StringWriter(sb);
+
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("0");
+                writer.WriteValue(message_type);
+                writer.WritePropertyName("1");
+                writer.WriteValue(trade.TradeId);
+                writer.WritePropertyName("2");
+                writer.WriteValue(trade.BuyOrderId);
+                writer.WritePropertyName("3");
+                writer.WriteValue(trade.SellOrderId);
+                writer.WritePropertyName("4");
+                writer.WriteValue(trade.BuyerUserId);
+                writer.WritePropertyName("5");
+                writer.WriteValue(trade.SellerUserId);
+                writer.WritePropertyName("6");
+                writer.WriteValue(trade.Side.ToInt32());
+                writer.WritePropertyName("7");
+                writer.WriteValue(trade.Amount);
+                writer.WritePropertyName("8");
+                writer.WriteValue(trade.Rate);
+                writer.WritePropertyName("9");
+                writer.WriteValue(trade.BuyerFee);
+                writer.WritePropertyName("10");
+                writer.WriteValue(trade.SellerFee);
+                writer.WritePropertyName("11");
+                writer.WriteValue(trade.DtMade.Ticks);
+                writer.WriteEndObject();
+            }
+
+            return sb.ToString();
+        }
 
         #endregion
 

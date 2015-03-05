@@ -10,10 +10,10 @@ namespace CoreCX.Trading
 
         internal List<Order> ActiveBuyOrders { get; set; }
         internal List<Order> ActiveSellOrders { get; set; }
-        internal List<Order> BuySLs { get; set; } //TODO inheritance
-        internal List<Order> SellSLs { get; set; } //TODO inheritance
-        internal List<Order> BuyTPs { get; set; } //TODO inheritance
-        internal List<Order> SellTPs { get; set; } //TODO inheritance
+        internal List<Order> BuySLs { get; set; }
+        internal List<Order> SellSLs { get; set; }
+        internal List<Order> BuyTPs { get; set; }
+        internal List<Order> SellTPs { get; set; }
         internal List<TSOrder> BuyTSs { get; set; }
         internal List<TSOrder> SellTSs { get; set; }
 
@@ -23,6 +23,10 @@ namespace CoreCX.Trading
 
         internal decimal bid_buf { get; set; }
         internal decimal ask_buf { get; set; }
+        internal int act_buy_buf_max_size { get; set; }
+        internal int act_sell_buf_max_size { get; set; }
+        internal List<OrderBuf> act_buy_buf { get; set; }
+        internal List<OrderBuf> act_sell_buf { get; set; }
 
         #endregion
 
@@ -39,6 +43,10 @@ namespace CoreCX.Trading
 
             bid_buf = 0m;
             ask_buf = 0m;
+            act_buy_buf_max_size = 30;
+            act_sell_buf_max_size = 30;
+            act_buy_buf = new List<OrderBuf>(act_buy_buf_max_size);
+            act_sell_buf = new List<OrderBuf>(act_sell_buf_max_size);
         }
 
         internal void InsertBuyOrder(Order order)

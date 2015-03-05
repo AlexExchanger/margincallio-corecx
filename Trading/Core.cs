@@ -416,8 +416,8 @@ namespace CoreCX.Trading
                                         Pusher.NewBalance(user_id, base_currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
 
                                         if (UpdTicker(ord_canc_data.Book)) Pusher.NewTicker(ord_canc_data.DerivedCurrency, ord_canc_data.Book.bid_buf, ord_canc_data.Book.ask_buf); //сообщение о новом тикере
-                                        //if (UpdActiveBuyTop()) Pusher.NewActiveBuyTop(act_buy_buf, DateTime.Now); //сообщение о новом топе стакана на покупку
-                                        //if (UpdActiveSellTop()) Pusher.NewActiveSellTop(act_sell_buf, DateTime.Now); //сообщение о новом топе стакана на продажу
+                                        if (UpdActiveBuyTop(ord_canc_data.Book)) Pusher.NewOrderBookTop(ord_canc_data.DerivedCurrency, false, ord_canc_data.Book.act_buy_buf); //сообщение о новом топе стакана на покупку
+                                        if (UpdActiveSellTop(ord_canc_data.Book)) Pusher.NewOrderBookTop(ord_canc_data.DerivedCurrency, true, ord_canc_data.Book.act_sell_buf); //сообщение о новом топе стакана на продажу
 
                                         return StatusCodes.Success;
                                     }
@@ -477,8 +477,8 @@ namespace CoreCX.Trading
                                         Pusher.NewBalance(user_id, ord_canc_data.DerivedCurrency, derived_funds.AvailableFunds, derived_funds.BlockedFunds); //сообщение о новом балансе
 
                                         if (UpdTicker(ord_canc_data.Book)) Pusher.NewTicker(ord_canc_data.DerivedCurrency, ord_canc_data.Book.bid_buf, ord_canc_data.Book.ask_buf); //сообщение о новом тикере
-                                        //if (UpdActiveBuyTop()) Pusher.NewActiveBuyTop(act_buy_buf, DateTime.Now); //сообщение о новом топе стакана на покупку
-                                        //if (UpdActiveSellTop()) Pusher.NewActiveSellTop(act_sell_buf, DateTime.Now); //сообщение о новом топе стакана на продажу
+                                        if (UpdActiveBuyTop(ord_canc_data.Book)) Pusher.NewOrderBookTop(ord_canc_data.DerivedCurrency, false, ord_canc_data.Book.act_buy_buf); //сообщение о новом топе стакана на покупку
+                                        if (UpdActiveSellTop(ord_canc_data.Book)) Pusher.NewOrderBookTop(ord_canc_data.DerivedCurrency, true, ord_canc_data.Book.act_sell_buf); //сообщение о новом топе стакана на продажу
 
                                         return StatusCodes.Success;
                                     }
@@ -1285,8 +1285,8 @@ namespace CoreCX.Trading
             if (Accounts.Count == 0 || book.ActiveBuyOrders.Count == 0 || book.ActiveSellOrders.Count == 0)
             {
                 if (UpdTicker(book)) Pusher.NewTicker(derived_currency, book.bid_buf, book.ask_buf); //сообщение о новом тикере
-                //if (UpdActiveBuyTop()) Pusher.NewActiveBuyTop(act_buy_buf, DateTime.Now); //сообщение о новом топе стакана на покупку
-                //if (UpdActiveSellTop()) Pusher.NewActiveSellTop(act_sell_buf, DateTime.Now); //сообщение о новом топе стакана на продажу
+                if (UpdActiveBuyTop(book)) Pusher.NewOrderBookTop(derived_currency, false, book.act_buy_buf); //сообщение о новом топе стакана на покупку
+                if (UpdActiveSellTop(book)) Pusher.NewOrderBookTop(derived_currency, true, book.act_sell_buf); //сообщение о новом топе стакана на продажу
                 return;
             }
 
@@ -1322,7 +1322,7 @@ namespace CoreCX.Trading
                 {
                     //добавляем объект Trade в коллекцию
                     Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, trade_side, sell_ord.ActualAmount, trade_rate, sell_ord.ActualAmount * buyer_derived_funds.Fee, sell_ord.ActualAmount * trade_rate * seller_derived_funds.Fee);
-                    //Pusher.NewTrade(trade); //сообщение о новой сделке
+                    Pusher.NewTrade(trade); //сообщение о новой сделке
 
                     //начисляем продавцу сумму минус комиссия
                     seller_derived_funds.BlockedFunds -= sell_ord.ActualAmount;
@@ -1344,7 +1344,7 @@ namespace CoreCX.Trading
 
                     //buy-заявка становится partially filled => уменьшается её ActualAmount
                     buy_ord.ActualAmount -= sell_ord.ActualAmount;
-                    //Pusher.NewOrderStatus(buy_ord.OrderId, buy_ord.UserId, (int)OrdExecStatus.PartiallyFilled, DateTime.Now); //сообщение о новом статусе заявки
+                    Pusher.NewOrderStatus(buy_ord.OrderId, buy_ord.UserId, OrderStatuses.PartiallyFilled); //сообщение о новом статусе заявки
                     
                     //увеличивается ActualAmount привязанных к sell-заявке SL/TP/TS заявок
                     if (sell_ord.StopLoss != null) sell_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
@@ -1353,7 +1353,7 @@ namespace CoreCX.Trading
 
                     //sell-заявка становится filled => её ActualAmount становится нулевым
                     sell_ord.ActualAmount = 0m;
-                    //Pusher.NewOrderStatus(sell_ord.OrderId, sell_ord.UserId, (int)OrdExecStatus.Filled, DateTime.Now); //сообщение о новом статусе заявки                    
+                    Pusher.NewOrderStatus(sell_ord.OrderId, sell_ord.UserId, OrderStatuses.Filled); //сообщение о новом статусе заявки                    
 
                     //FIX multicast
                     //FixMessager.NewMarketDataIncrementalRefresh(trade);
@@ -1372,7 +1372,7 @@ namespace CoreCX.Trading
                 {
                     //добавляем объект Trade в коллекцию
                     Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, trade_side, buy_ord.ActualAmount, trade_rate, buy_ord.ActualAmount * buyer_derived_funds.Fee, buy_ord.ActualAmount * trade_rate * seller_derived_funds.Fee);
-                    //Pusher.NewTrade(trade); //сообщение о новой сделке
+                    Pusher.NewTrade(trade); //сообщение о новой сделке
 
                     //начисляем продавцу сумму минус комиссия
                     seller_derived_funds.BlockedFunds -= buy_ord.ActualAmount;
@@ -1394,7 +1394,7 @@ namespace CoreCX.Trading
 
                     //sell-заявка становится partially filled => уменьшается её ActualAmount
                     sell_ord.ActualAmount -= buy_ord.ActualAmount;
-                    //Pusher.NewOrderStatus(sell_ord.OrderId, sell_ord.UserId, (int)OrdExecStatus.PartiallyFilled, DateTime.Now); //сообщение о новом статусе заявки
+                    Pusher.NewOrderStatus(sell_ord.OrderId, sell_ord.UserId, OrderStatuses.PartiallyFilled); //сообщение о новом статусе заявки
 
                     //увеличивается ActualAmount привязанных к buy-заявке SL/TP/TS заявок
                     if (buy_ord.StopLoss != null) buy_ord.StopLoss.ActualAmount += buy_ord.ActualAmount;
@@ -1403,7 +1403,7 @@ namespace CoreCX.Trading
 
                     //buy-заявка становится filled => её ActualAmount становится нулевым
                     buy_ord.ActualAmount = 0m;
-                    //Pusher.NewOrderStatus(buy_ord.OrderId, buy_ord.UserId, (int)OrdExecStatus.Filled, DateTime.Now); //сообщение о новом статусе заявки
+                    Pusher.NewOrderStatus(buy_ord.OrderId, buy_ord.UserId, OrderStatuses.Filled); //сообщение о новом статусе заявки
 
                     //FIX multicast
                     //FixMessager.NewMarketDataIncrementalRefresh(trade);
@@ -1422,7 +1422,7 @@ namespace CoreCX.Trading
                 {
                     //добавляем объект Trade в коллекцию
                     Trade trade = new Trade(buy_ord.OrderId, sell_ord.OrderId, buy_ord.UserId, sell_ord.UserId, trade_side, buy_ord.ActualAmount, trade_rate, sell_ord.ActualAmount * buyer_derived_funds.Fee, sell_ord.ActualAmount * trade_rate * seller_derived_funds.Fee);
-                    //Pusher.NewTrade(trade); //сообщение о новой сделке
+                    Pusher.NewTrade(trade); //сообщение о новой сделке
 
                     //начисляем продавцу сумму минус комиссия
                     seller_derived_funds.BlockedFunds -= buy_ord.ActualAmount;
@@ -1444,7 +1444,7 @@ namespace CoreCX.Trading
 
                     //buy-заявка становится filled => её ActualAmount становится нулевым
                     buy_ord.ActualAmount = 0m;
-                    //Pusher.NewOrderStatus(buy_ord.OrderId, buy_ord.UserId, (int)OrdExecStatus.Filled, DateTime.Now); //сообщение о новом статусе заявки
+                    Pusher.NewOrderStatus(buy_ord.OrderId, buy_ord.UserId, OrderStatuses.Filled); //сообщение о новом статусе заявки
 
                     //увеличивается ActualAmount привязанных к sell-заявке SL/TP/TS заявок
                     if (sell_ord.StopLoss != null) sell_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
@@ -1453,7 +1453,7 @@ namespace CoreCX.Trading
 
                     //sell-заявка становится filled => её ActualAmount становится нулевым
                     sell_ord.ActualAmount = 0m;
-                    //Pusher.NewOrderStatus(sell_ord.OrderId, sell_ord.UserId, (int)OrdExecStatus.Filled, DateTime.Now); //сообщение о новом статусе заявки
+                    Pusher.NewOrderStatus(sell_ord.OrderId, sell_ord.UserId, OrderStatuses.Filled); //сообщение о новом статусе заявки
 
                     //FIX multicast
                     //FixMessager.NewMarketDataIncrementalRefresh(trade);
@@ -1476,8 +1476,8 @@ namespace CoreCX.Trading
             }
 
             if (UpdTicker(book)) Pusher.NewTicker(derived_currency, book.bid_buf, book.ask_buf); //сообщение о новом тикере
-            //if (UpdActiveBuyTop()) Pusher.NewActiveBuyTop(act_buy_buf, DateTime.Now); //сообщение о новом топе стакана на покупку
-            //if (UpdActiveSellTop()) Pusher.NewActiveSellTop(act_sell_buf, DateTime.Now); //сообщение о новом топе стакана на продажу
+            if (UpdActiveBuyTop(book)) Pusher.NewOrderBookTop(derived_currency, false, book.act_buy_buf); //сообщение о новом топе стакана на покупку
+            if (UpdActiveSellTop(book)) Pusher.NewOrderBookTop(derived_currency, true, book.act_sell_buf); //сообщение о новом топе стакана на продажу
         }
 
         private bool UpdTicker(OrderBook book)
@@ -1505,6 +1505,97 @@ namespace CoreCX.Trading
             return _upd;
         }
 
+        private bool UpdActiveBuyTop(OrderBook book)
+        {
+            //обновление топа ActiveBuyOrders
+            bool _upd = false;
+
+            List<OrderBuf> ActBuyCopy = new List<OrderBuf>(30);
+            if (book.ActiveBuyOrders.Count > 0)
+            {
+                decimal accumulated_amount = book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1].ActualAmount;
+                decimal last_rate = book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1].Rate;
+                for (int i = book.ActiveBuyOrders.Count - 2; i >= 0; i--)
+                {
+                    if (book.ActiveBuyOrders[i].Rate == last_rate)
+                    {
+                        accumulated_amount += book.ActiveBuyOrders[i].ActualAmount;
+                    }
+                    else
+                    {
+                        if (ActBuyCopy.Count == book.act_buy_buf_max_size - 1) break;
+
+                        //добавляем в буфер accumulated_amount и last_rate до их изменения                    
+                        ActBuyCopy.Add(new OrderBuf(accumulated_amount, last_rate));
+
+                        Order buy_ord = book.ActiveBuyOrders[i];
+                        accumulated_amount = buy_ord.ActualAmount;
+                        last_rate = buy_ord.Rate;
+                    }
+                }
+                ActBuyCopy.Add(new OrderBuf(accumulated_amount, last_rate));
+            }
+
+            if (!EqualOrderBooks(book.act_buy_buf, ActBuyCopy))
+            {
+                book.act_buy_buf = ActBuyCopy;
+                _upd = true;
+            }
+            return _upd;
+        }
+
+        private bool UpdActiveSellTop(OrderBook book)
+        {
+            //обновление топа ActiveSellOrders
+            bool _upd = false;
+
+            List<OrderBuf> ActSellCopy = new List<OrderBuf>(30);
+            if (book.ActiveSellOrders.Count > 0)
+            {
+                decimal accumulated_amount = book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].ActualAmount;
+                decimal last_rate = book.ActiveSellOrders[book.ActiveSellOrders.Count - 1].Rate;
+                for (int i = book.ActiveSellOrders.Count - 2; i >= 0; i--)
+                {
+                    if (book.ActiveSellOrders[i].Rate == last_rate)
+                    {
+                        accumulated_amount += book.ActiveSellOrders[i].ActualAmount;
+                    }
+                    else
+                    {
+                        if (ActSellCopy.Count == book.act_sell_buf_max_size - 1) break;
+
+                        //добавляем в буфер accumulated_amount и last_rate до их изменения                    
+                        ActSellCopy.Add(new OrderBuf(accumulated_amount, last_rate));
+
+                        Order sell_ord = book.ActiveSellOrders[i];
+                        accumulated_amount = sell_ord.ActualAmount;
+                        last_rate = sell_ord.Rate;
+                    }
+                }
+                ActSellCopy.Add(new OrderBuf(accumulated_amount, last_rate));
+            }
+
+            if (!EqualOrderBooks(book.act_sell_buf, ActSellCopy))
+            {
+                book.act_sell_buf = ActSellCopy;
+                _upd = true;
+            }
+            return _upd;
+        }
+
+        private bool EqualOrderBooks(List<OrderBuf> book1, List<OrderBuf> book2)
+        {
+            if (book1.Count != book2.Count) return false;
+            else
+            {
+                for (int i = 0; i < book1.Count; i++)
+                {
+                    if (!book1[i].Equals(book2[i])) return false;
+                }
+                return true;
+            }
+        }
+        
         #endregion
 
         #region MARGIN MANAGEMENT

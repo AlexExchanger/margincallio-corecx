@@ -97,19 +97,14 @@ namespace CoreCX
 
     internal enum MessageTypes
     {
-        NewBalance = 0, //DONE
-        NewMarginInfo = 1, //DONE  
-        NewTicker = 2, //DONE
-        NewActiveBuyTop = 3, 
-        NewActiveSellTop = 4, 
-        NewPlaceLimit = 5, // + func_call_id
-        NewPlaceMarket = 6, // + func_call_id        
-        NewTrade = 7,
-        NewOrderStatus = 8,
-        NewCancelOrder = 9, // + func_call_id
-        NewExecCondOrd = 10,
-        NewMarginCall = 11, //DONE
-        NewForcedLiquidation = 12
+        NewBalance = 0,
+        NewMarginInfo = 1,
+        NewMarginCall = 2,
+        NewTicker = 3,
+        NewOrderBookTop = 4,
+        NewOrder = 5, //EDIT + добавить Event (PlaceLimit / PlaceMarket / FL / ExecSL / ExecTP / ExecTS / AddSL / AddTP / AddTS / Cancel)
+        NewOrderStatus = 6,
+        NewTrade = 7
         //TODO NewAccountFee // + func_call_id
     }
 
@@ -121,14 +116,6 @@ namespace CoreCX
         FixApi = 3
     }
 
-    internal enum FCRejCodes
-    {
-        InvalidFuncArgs = 0,
-        FuncNotFound = 1,
-        MarketClosed = 2,
-        BackupRestoreInProc = 3
-    }
-
     internal enum CancOrdTypes
     {
         Limit = 0,
@@ -137,23 +124,10 @@ namespace CoreCX
         TrailingStop = 3
     }
 
-    internal enum OrdExecStatuses
+    internal enum OrderStatuses
     {
         PartiallyFilled = 0,
         Filled = 1
-    }
-
-    internal enum MarketStatuses
-    {
-        Closed = 0,
-        Opened = 1
-    }
-
-    internal enum SnapshotOperations
-    {
-        BackupMaster = 0,
-        RestoreMaster = 1,
-        RestoreSlave = 2
     }
     
 }
