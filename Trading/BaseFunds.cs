@@ -13,5 +13,11 @@ namespace CoreCX.Trading
             AvailableFunds = 0m;
             BlockedFunds = 0m;            
         }
+
+        internal BaseFunds(BaseFunds funds) //конструктор копирования
+        {
+            AvailableFunds = funds.AvailableFunds;
+            BlockedFunds = funds.BlockedFunds;
+        }
     }
 }

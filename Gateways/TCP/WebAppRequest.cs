@@ -213,14 +213,14 @@ namespace CoreCX.Gateways.TCP
                 case (int)FuncIds.GetAccountBalance: //получить баланс торгового счёта для заданной пары
                     {
                         int user_id;
-                        decimal base_af, base_bf, derived_af, derived_bf, fee;
+                        decimal available, blocked;
                         if (int.TryParse(str_args[0], out user_id) && !String.IsNullOrEmpty(str_args[1]))
                         {
                             call = new FuncCall();
                             call.Action = () =>
                             {
-                                StatusCodes status = App.core.GetAccountBalance(user_id, str_args[1], out base_af, out base_bf, out derived_af, out derived_bf, out fee);
-                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, base_af, base_bf, derived_af, derived_bf, fee);
+                                StatusCodes status = App.core.GetAccountBalance(user_id, str_args[1], out available, out blocked);
+                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, available, blocked);
                             };
                             Console.WriteLine("To queue core.GetAccountBalance(" + str_args[0] + ", " + str_args[1] + ")");
                             break;

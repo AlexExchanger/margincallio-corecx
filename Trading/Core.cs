@@ -619,30 +619,46 @@ namespace CoreCX.Trading
 
         //TODO GetAccountFee
 
-        internal StatusCodes GetAccountBalance(int user_id, string derived_currency, out decimal base_af, out decimal base_bf, out decimal derived_af, out decimal derived_bf, out decimal fee) //получить баланс торгового счёта для заданной пары
+        internal StatusCodes GetAccountBalance(int user_id, string currency, out decimal available, out decimal blocked) //получить баланс торгового счёта
         {
-            base_af = 0m;
-            base_bf = 0m;
-            derived_af = 0m;
-            derived_bf = 0m;            
-            fee = 0m;
+            available = 0m;
+            blocked = 0m;
 
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то получаем баланс
             {
-                base_af = acc.BaseCFunds.AvailableFunds;
-                base_bf = acc.BaseCFunds.BlockedFunds;
-
-                DerivedFunds funds;
-                if (acc.DerivedCFunds.TryGetValue(derived_currency, out funds))
+                if (currency == base_currency) //баланс базовой валюты
                 {
-                    derived_af = funds.AvailableFunds;
-                    derived_bf = funds.BlockedFunds;
-                    fee = funds.Fee * 100m;
-
+                    available = acc.BaseCFunds.AvailableFunds;
+                    blocked = acc.BaseCFunds.BlockedFunds;
                     return StatusCodes.Success;
                 }
-                else return StatusCodes.ErrorCurrencyPairNotFound;
+                else //баланс производной валюты
+                {
+                    DerivedFunds funds;
+                    if (acc.DerivedCFunds.TryGetValue(currency, out funds))
+                    {
+                        available = funds.AvailableFunds;
+                        blocked = funds.BlockedFunds;
+                        return StatusCodes.Success;
+                    }
+                    else return StatusCodes.ErrorCurrencyNotFound;
+                }
+            }
+            else return StatusCodes.ErrorAccountNotFound;
+        }
+
+        internal StatusCodes GetAccountBalance(int user_id, List<BaseFunds> all_funds) //получить все балансы торгового счёта
+        {
+            all_funds = new List<BaseFunds>();
+
+            Account acc;
+            if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то получаем баланс
+            {
+                all_funds.Add(new BaseFunds(acc.BaseCFunds));
+                //TODO
+
+                return StatusCodes.Success;
             }
             else return StatusCodes.ErrorAccountNotFound;
         }

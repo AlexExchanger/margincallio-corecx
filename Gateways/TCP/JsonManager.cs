@@ -151,40 +151,7 @@ namespace CoreCX.Gateways.TCP
 
             return sb.ToString();
         }
-
-        internal static string FormTechJson(long func_call_id, int status_code, decimal base_af, decimal base_bf, decimal derived_af, decimal derived_bf, decimal fee)
-        {
-            StringBuilder sb = new StringBuilder();
-            StringWriter sw = new StringWriter(sb);
-
-            using (JsonWriter writer = new JsonTextWriter(sw))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("0");
-                writer.WriteValue(func_call_id);
-                writer.WritePropertyName("1");
-                writer.WriteValue(status_code);
-
-                if (status_code == 0)
-                {
-                    writer.WritePropertyName("2");
-                    writer.WriteValue(base_af);
-                    writer.WritePropertyName("3");
-                    writer.WriteValue(base_bf);
-                    writer.WritePropertyName("4");
-                    writer.WriteValue(derived_af);
-                    writer.WritePropertyName("5");
-                    writer.WriteValue(derived_bf);
-                    writer.WritePropertyName("6");
-                    writer.WriteValue(fee);
-                }
-
-                writer.WriteEndObject();
-            }
-
-            return sb.ToString();
-        }
-
+        
         internal static string FormTechJson(long func_call_id, int status_code, decimal max_leverage, decimal level_mc, decimal level_fl, decimal equity, decimal margin, decimal free_margin, decimal margin_level, int margin_call, int suspended)
         {
             StringBuilder sb = new StringBuilder();
