@@ -13,7 +13,6 @@ namespace CoreCX.Trading
         #region DATA COLLECTIONS
 
         private Dictionary<int, Account> Accounts; //торговые счета "ID юзера -> торговый счёт"
-        private Dictionary<int, Account> Debitors; //счета дебиторов (использующих заёмные средства)
         private Dictionary<string, OrderBook> OrderBooks; //словарь "производная валюта -> стакан"	
         private Dictionary<long, CancOrdData> CancelOrderDict; //словарь "ID заявки -> параметры и стакан"
         private Dictionary<string, FixAccount> FixAccounts; //FIX-аккаунты
@@ -46,7 +45,6 @@ namespace CoreCX.Trading
         internal Core(string base_currency, char currency_pair_separator)
         {
             Accounts = new Dictionary<int, Account>(3000);
-            Debitors = new Dictionary<int, Account>(1000);
             OrderBooks = new Dictionary<string, OrderBook>(10);
             CancelOrderDict = new Dictionary<long, CancOrdData>(2000);
             FixAccounts = new Dictionary<string, FixAccount>(500);
@@ -1102,7 +1100,6 @@ namespace CoreCX.Trading
 
                         if (margin_pars[2] * acc.MaxLeverage >= total)
                         {
-                            if (!Debitors.ContainsKey(user_id)) Debitors.Add(user_id, acc); //добавление юзера в словарь дебиторов
                             acc.BaseCFunds.AvailableFunds -= total; //снимаем средства с доступных средств
                             acc.BaseCFunds.BlockedFunds += total; //блокируем средства в заявке на покупку
                             Pusher.NewBalance(user_id, base_currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
@@ -1249,7 +1246,6 @@ namespace CoreCX.Trading
 
                         if (margin_pars[2] * acc.MaxLeverage >= amount * rate)
                         {
-                            if (!Debitors.ContainsKey(user_id)) Debitors.Add(user_id, acc); //добавление юзера в словарь дебиторов
                             derived_funds.AvailableFunds -= amount; //снимаем средства с доступных средств
                             derived_funds.BlockedFunds += amount; //блокируем средства в заявке на продажу
                             Pusher.NewBalance(user_id, derived_currency, derived_funds.AvailableFunds, derived_funds.BlockedFunds); //сообщение о новом балансе
@@ -1510,27 +1506,11 @@ namespace CoreCX.Trading
         {
             //реплицировать
 
-            //учёт id юзеров, закрывших позиции с плечом
-            List<int> ids_to_rm = new List<int>();
-
-            //проверка каждого дебитора
-            foreach (KeyValuePair<int, Account> acc in Debitors)
+            //управление маржинальными параметрами каждого клиента
+            foreach (KeyValuePair<int, Account> acc in Accounts)
             {
                 decimal[] margin_pars = CalcAccMarginPars(acc.Value); //расчёт маржинальных параметров юзера
-
-                //проверка на использование заёмных средств
-                if (margin_pars[1] == 0m)
-                {
-                    if (acc.Value.MarginCall) acc.Value.MarginCall = false; //сбрасываем флаг Margin Call
-                    acc.Value.Equity = 0m;
-                    acc.Value.Margin = 0m;
-                    acc.Value.FreeMargin = 0m;
-                    acc.Value.MarginLevel = 0m;
-                    //Pusher.NewMarginInfo(account.Key, 0m, 100m, DateTime.Now); //сообщение о новом уровне маржи
-                    ids_to_rm.Add(acc.Key);
-                    continue;
-                }
-
+                            
                 if (acc.Value.Equity != margin_pars[0]) //обновляем параметры аккаунта, если equity изменился
                 {
                     acc.Value.Equity = margin_pars[0];
@@ -1538,6 +1518,13 @@ namespace CoreCX.Trading
                     acc.Value.FreeMargin = margin_pars[2];
                     acc.Value.MarginLevel = margin_pars[3];
                     //Pusher.NewMarginInfo(account.Key, account.Value.Equity, account.Value.MarginLevel * 100m, DateTime.Now); //сообщение о новом уровне маржи
+                }
+
+                //проверка на использование заёмных средств
+                if (margin_pars[1] == 0m)
+                {
+                    if (acc.Value.MarginCall) acc.Value.MarginCall = false; //сброс флага Margin Call
+                    continue;
                 }
 
                 //проверка условия Margin Call
@@ -1627,11 +1614,6 @@ namespace CoreCX.Trading
                         Match(fl_derived_currency, fl_book);
                     }
                 }
-            }
-
-            for (int i = 0; i < ids_to_rm.Count; i++)
-            {
-                Debitors.Remove(ids_to_rm[i]);
             }
         }
 
