@@ -57,6 +57,9 @@
     <Compile Include="Gateways\TCP\JsonManager.cs" />
     <Compile Include="Gateways\TCP\Messages\BalanceMsg.cs" />
     <Compile Include="Gateways\TCP\Messages\IJsonSerializable.cs" />
+    <Compile Include="Gateways\TCP\Messages\MarginCallMsg.cs" />
+    <Compile Include="Gateways\TCP\Messages\MarginInfoMsg.cs" />
+    <Compile Include="Gateways\TCP\Messages\TickerMsg.cs" />
     <Compile Include="Gateways\TCP\Pusher.cs" />
     <Compile Include="Gateways\TCP\SocketIO.cs" />
     <Compile Include="Gateways\TCP\TcpServer.cs" />

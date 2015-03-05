@@ -26,18 +26,7 @@ namespace CoreCX.Trading
         private char currency_pair_separator;
 
         #endregion
-
-        #region BUFFER VARIABLES
-
-        private decimal bid_buf;
-        private decimal ask_buf;
-        private int act_buy_buf_max_size; //TODO change size on-the-fly
-        private int act_sell_buf_max_size; //TODO change size on-the-fly
-        private List<OrderBuf> act_buy_buf;
-        private List<OrderBuf> act_sell_buf;
-
-        #endregion
-
+               
         #endregion
 
         #region CORE CONSTRUCTORS
@@ -53,15 +42,8 @@ namespace CoreCX.Trading
             this.base_currency = base_currency;
             this.currency_pair_separator = currency_pair_separator;
 
-            bid_buf = 0m;
-            ask_buf = 0m;
-            act_buy_buf_max_size = 30;
-            act_sell_buf_max_size = 30;
-            act_buy_buf = new List<OrderBuf>(act_buy_buf_max_size);
-            act_sell_buf = new List<OrderBuf>(act_sell_buf_max_size);
-
-            MarginManager.QueueManageMarginExecution();
-            CondOrdManager.QueueManageConditionalOrdersExecution();
+            MarginManager.QueueManageMarginExecution(); //сделать не static классами 
+            CondOrdManager.QueueManageConditionalOrdersExecution(); //сделать не static классами
         }
 
         #endregion
@@ -313,7 +295,7 @@ namespace CoreCX.Trading
 
                         if (market_rate == 0m) return StatusCodes.ErrorInsufficientMarketVolume;
 
-                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, sl_rate, tp_rate, ts_offset, MessageTypes.NewPlaceInstant, func_call_id, fc_source, external_data);
+                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, sl_rate, tp_rate, ts_offset, MessageTypes.NewPlaceMarket, func_call_id, fc_source, external_data);
                     }
                 }
                 else //если заявка на продажу (1)
@@ -361,7 +343,7 @@ namespace CoreCX.Trading
 
                         if (market_rate == 0m) return StatusCodes.ErrorInsufficientMarketVolume;
 
-                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, sl_rate, tp_rate, ts_offset, MessageTypes.NewPlaceInstant, func_call_id, fc_source, external_data);
+                        return BaseLimit(user_id, derived_currency, book, side, accumulated_amount, market_rate, sl_rate, tp_rate, ts_offset, MessageTypes.NewPlaceMarket, func_call_id, fc_source, external_data);
                     }
                 }
             }
@@ -432,8 +414,8 @@ namespace CoreCX.Trading
                                         acc.BaseCFunds.BlockedFunds -= total;
                                         acc.BaseCFunds.AvailableFunds += total;
                                         Pusher.NewBalance(user_id, base_currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
-                                        
-                                        //if (UpdTicker()) Pusher.NewTicker(bid_buf, ask_buf, DateTime.Now); //сообщение о новом тикере
+
+                                        if (UpdTicker(ord_canc_data.Book)) Pusher.NewTicker(ord_canc_data.DerivedCurrency, ord_canc_data.Book.bid_buf, ord_canc_data.Book.ask_buf); //сообщение о новом тикере
                                         //if (UpdActiveBuyTop()) Pusher.NewActiveBuyTop(act_buy_buf, DateTime.Now); //сообщение о новом топе стакана на покупку
                                         //if (UpdActiveSellTop()) Pusher.NewActiveSellTop(act_sell_buf, DateTime.Now); //сообщение о новом топе стакана на продажу
 
@@ -494,7 +476,7 @@ namespace CoreCX.Trading
                                         derived_funds.AvailableFunds += sell_order.ActualAmount;
                                         Pusher.NewBalance(user_id, ord_canc_data.DerivedCurrency, derived_funds.AvailableFunds, derived_funds.BlockedFunds); //сообщение о новом балансе
 
-                                        //if (UpdTicker()) Pusher.NewTicker(bid_buf, ask_buf, DateTime.Now); //сообщение о новом тикере
+                                        if (UpdTicker(ord_canc_data.Book)) Pusher.NewTicker(ord_canc_data.DerivedCurrency, ord_canc_data.Book.bid_buf, ord_canc_data.Book.ask_buf); //сообщение о новом тикере
                                         //if (UpdActiveBuyTop()) Pusher.NewActiveBuyTop(act_buy_buf, DateTime.Now); //сообщение о новом топе стакана на покупку
                                         //if (UpdActiveSellTop()) Pusher.NewActiveSellTop(act_sell_buf, DateTime.Now); //сообщение о новом топе стакана на продажу
 
@@ -1302,7 +1284,7 @@ namespace CoreCX.Trading
             //проверка коллекций на пустоту
             if (Accounts.Count == 0 || book.ActiveBuyOrders.Count == 0 || book.ActiveSellOrders.Count == 0)
             {
-                //if (UpdTicker()) Pusher.NewTicker(bid_buf, ask_buf, DateTime.Now); //сообщение о новом тикере
+                if (UpdTicker(book)) Pusher.NewTicker(derived_currency, book.bid_buf, book.ask_buf); //сообщение о новом тикере
                 //if (UpdActiveBuyTop()) Pusher.NewActiveBuyTop(act_buy_buf, DateTime.Now); //сообщение о новом топе стакана на покупку
                 //if (UpdActiveSellTop()) Pusher.NewActiveSellTop(act_sell_buf, DateTime.Now); //сообщение о новом топе стакана на продажу
                 return;
@@ -1493,9 +1475,34 @@ namespace CoreCX.Trading
                 if ((book.ActiveBuyOrders.Count == 0) || (book.ActiveSellOrders.Count == 0)) break;
             }
 
-            //if (UpdTicker()) Pusher.NewTicker(bid_buf, ask_buf, DateTime.Now); //сообщение о новом тикере
+            if (UpdTicker(book)) Pusher.NewTicker(derived_currency, book.bid_buf, book.ask_buf); //сообщение о новом тикере
             //if (UpdActiveBuyTop()) Pusher.NewActiveBuyTop(act_buy_buf, DateTime.Now); //сообщение о новом топе стакана на покупку
             //if (UpdActiveSellTop()) Pusher.NewActiveSellTop(act_sell_buf, DateTime.Now); //сообщение о новом топе стакана на продажу
+        }
+
+        private bool UpdTicker(OrderBook book)
+        {
+            //обновление тикера
+            bool _upd = false;
+            if (book.ActiveBuyOrders.Count > 0)
+            {
+                Order buy_top_ord = book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1];
+                if (book.bid_buf != buy_top_ord.Rate)
+                {
+                    book.bid_buf = buy_top_ord.Rate;
+                    _upd = true;
+                }
+            }
+            if (book.ActiveSellOrders.Count > 0)
+            {
+                Order sell_top_ord = book.ActiveSellOrders[book.ActiveSellOrders.Count - 1];
+                if (book.ask_buf != sell_top_ord.Rate)
+                {
+                    book.ask_buf = sell_top_ord.Rate;
+                    _upd = true;
+                }
+            }
+            return _upd;
         }
 
         #endregion
@@ -1517,7 +1524,7 @@ namespace CoreCX.Trading
                     acc.Value.Margin = margin_pars[1];
                     acc.Value.FreeMargin = margin_pars[2];
                     acc.Value.MarginLevel = margin_pars[3];
-                    //Pusher.NewMarginInfo(account.Key, account.Value.Equity, account.Value.MarginLevel * 100m, DateTime.Now); //сообщение о новом уровне маржи
+                    Pusher.NewMarginInfo(acc.Key, acc.Value.Equity, acc.Value.Margin, acc.Value.FreeMargin, acc.Value.MarginLevel * 100m); //сообщение о новом уровне маржи
                 }
 
                 //проверка на использование заёмных средств
@@ -1533,7 +1540,7 @@ namespace CoreCX.Trading
                     if (!acc.Value.MarginCall)
                     {
                         acc.Value.MarginCall = true;
-                        //Pusher.NewMarginCall(account.Key, DateTime.Now); //сообщение о новом Margin Call
+                        Pusher.NewMarginCall(acc.Key); //сообщение о новом Margin Call
                     }
                 }
                 else if (acc.Value.MarginCall) acc.Value.MarginCall = false; //сброс флага Margin Call

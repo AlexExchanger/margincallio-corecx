@@ -487,6 +487,89 @@ namespace CoreCX.Gateways.TCP
             return sb.ToString();
         }
 
+        internal static string FormTechJson(int message_type, int user_id, decimal equity, decimal margin, decimal free_margin, decimal margin_level, DateTime dt_made)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter sw = new StringWriter(sb);
+
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("0");
+                writer.WriteValue(message_type);
+                writer.WritePropertyName("1");
+                writer.WriteValue(user_id);
+                writer.WritePropertyName("2");
+                writer.WriteValue(equity);
+                writer.WritePropertyName("3");
+                writer.WriteValue(margin);
+                writer.WritePropertyName("4");
+                writer.WriteValue(free_margin);
+                writer.WritePropertyName("5");
+                writer.WriteValue(margin_level);
+                writer.WritePropertyName("6");
+                writer.WriteValue(dt_made.Ticks);
+                writer.WriteEndObject();
+            }
+
+            return sb.ToString();
+        }
+
+        internal static string FormTechJson(int message_type, string derived_currency, decimal bid, decimal ask, DateTime dt_made)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter sw = new StringWriter(sb);
+
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("0");
+                writer.WriteValue(message_type);
+                writer.WritePropertyName("1");
+                writer.WriteValue(derived_currency);
+                writer.WritePropertyName("2");
+                writer.WriteValue(bid);
+                writer.WritePropertyName("3");
+                writer.WriteValue(ask);
+                writer.WritePropertyName("4");
+                writer.WriteValue(dt_made.Ticks);
+                writer.WriteEndObject();
+            }
+
+            return sb.ToString();
+        }
+
+
+
+
+
+
+
+
+
+
+        internal static string FormTechJson(int message_type, int user_id, DateTime dt_made)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter sw = new StringWriter(sb);
+
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("0");
+                writer.WriteValue(message_type);
+                writer.WritePropertyName("1");
+                writer.WriteValue(user_id);
+                writer.WritePropertyName("2");
+                writer.WriteValue(dt_made.Ticks);
+                writer.WriteEndObject();
+            }
+
+            return sb.ToString();
+        }
+
+        
+
         #endregion
 
     }

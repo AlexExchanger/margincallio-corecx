@@ -97,32 +97,20 @@ namespace CoreCX
 
     internal enum MessageTypes
     {
-        NewBalance = 0, 
-        NewTicker = 1, 
-        NewActiveBuyTop = 2, 
-        NewActiveSellTop = 3, 
-        NewPlaceLimit = 4, // + func_call_id
-        NewPlaceMarket = 5, // + func_call_id
-        NewPlaceInstant = 6, // + func_call_id
-        NewTrade = 7, 
-        NewCancelOrder = 8, // + func_call_id
-        NewAddSL = 9, // + func_call_id
-        NewAddTP = 10, // + func_call_id
-        NewAddTS = 11, // + func_call_id  
-        NewRemoveSL = 12, // + func_call_id
-        NewRemoveTP = 13, // + func_call_id
-        NewRemoveTS = 14, // + func_call_id
-        NewAccountFee = 15, // + func_call_id
-        NewMarginInfo = 16,
-        NewMarginCall = 17,
-        NewForcedLiquidation = 18,
-        NewExecSL = 19,
-        NewExecTP = 20,
-        NewExecTS = 21,
-        NewFixRestart = 22,
-        NewOrderStatus = 23,
-        NewMarketStatus = 24,
-        NewSnapshotOperation = 25
+        NewBalance = 0, //DONE
+        NewMarginInfo = 1, //DONE  
+        NewTicker = 2, //DONE
+        NewActiveBuyTop = 3, 
+        NewActiveSellTop = 4, 
+        NewPlaceLimit = 5, // + func_call_id
+        NewPlaceMarket = 6, // + func_call_id        
+        NewTrade = 7,
+        NewOrderStatus = 8,
+        NewCancelOrder = 9, // + func_call_id
+        NewExecCondOrd = 10,
+        NewMarginCall = 11, //DONE
+        NewForcedLiquidation = 12
+        //TODO NewAccountFee // + func_call_id
     }
 
     internal enum FCSources

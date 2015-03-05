@@ -6,6 +6,8 @@ namespace CoreCX.Trading
     [Serializable]
     class OrderBook
     {
+        #region DATA COLLECTIONS
+
         internal List<Order> ActiveBuyOrders { get; set; }
         internal List<Order> ActiveSellOrders { get; set; }
         internal List<Order> BuySLs { get; set; } //TODO inheritance
@@ -14,6 +16,15 @@ namespace CoreCX.Trading
         internal List<Order> SellTPs { get; set; } //TODO inheritance
         internal List<TSOrder> BuyTSs { get; set; }
         internal List<TSOrder> SellTSs { get; set; }
+
+        #endregion
+
+        #region BUFFER VARIABLES
+
+        internal decimal bid_buf { get; set; }
+        internal decimal ask_buf { get; set; }
+
+        #endregion
 
         internal OrderBook()
         {
@@ -25,6 +36,9 @@ namespace CoreCX.Trading
             SellTPs = new List<Order>(2000);
             BuyTSs = new List<TSOrder>(500);
             SellTSs = new List<TSOrder>(500);
+
+            bid_buf = 0m;
+            ask_buf = 0m;
         }
 
         internal void InsertBuyOrder(Order order)
