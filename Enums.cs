@@ -102,7 +102,7 @@ namespace CoreCX
         NewMarginCall = 2,
         NewTicker = 3,
         NewOrderBookTop = 4,
-        NewOrder = 5, //EDIT + добавить Event (PlaceLimit / PlaceMarket / FL / ExecSL / ExecTP / ExecTS / AddSL / AddTP / AddTS / Cancel)
+        NewOrder = 5,
         NewOrderStatus = 6,
         NewTrade = 7
         //TODO NewAccountFee // + func_call_id
@@ -128,6 +128,20 @@ namespace CoreCX
     {
         PartiallyFilled = 0,
         Filled = 1
+    }
+
+    internal enum OrderEvents
+    {
+        PlaceLimit = 0,
+        PlaceMarket = 1,
+        ExecSL = 2,
+        ExecTP = 3,
+        ExecTS = 4,
+        AddSL = 5,
+        AddTP = 6,
+        AddTS = 7,
+        Cancel = 8,
+        ForcedLiquidation = 9
     }
     
 }

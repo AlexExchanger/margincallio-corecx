@@ -35,19 +35,19 @@ namespace CoreCX.Gateways.TCP
             Queues.daemon_queue.Enqueue(new ActiveTopMsg(derived_currency, side, act_top));
         }
 
-        internal static void NewOrder(int msg_type, long func_call_id, FCSources fc_source, bool order_kind, Order order) //new order (msg_type дифференциирует тип заявки) => DAEMON
+        internal static void NewOrder(OrderEvents order_event, FCSources fc_source, long func_call_id, string derived_currency, bool side, Order order) //new order => DAEMON
         {
-            Queues.daemon_queue.Enqueue(new OrderMsg(msg_type, func_call_id, (int)fc_source, order_kind, order));
+            Queues.daemon_queue.Enqueue(new OrderMsg((int)order_event, (int)fc_source, func_call_id, derived_currency, side, order));
         }
 
-        internal static void NewOrderStatus(long order_id, int user_id, OrderStatuses order_status) //new order status => DAEMON
+        internal static void NewOrderStatus(string derived_currency, long order_id, int user_id, OrderStatuses order_status) //new order status => DAEMON
         {
-            Queues.daemon_queue.Enqueue(new OrderStatusMsg(order_id, user_id, (int)order_status));
+            Queues.daemon_queue.Enqueue(new OrderStatusMsg(derived_currency, order_id, user_id, (int)order_status));
         }
 
-        internal static void NewTrade(Trade trade) //new trade => DAEMON
+        internal static void NewTrade(string derived_currency, Trade trade) //new trade => DAEMON
         {
-            Queues.daemon_queue.Enqueue(new TradeMsg(trade));
+            Queues.daemon_queue.Enqueue(new TradeMsg(derived_currency, trade));
         }
 
     }
