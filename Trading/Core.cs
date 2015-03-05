@@ -1855,7 +1855,7 @@ namespace CoreCX.Trading
                         {
                             book.SellSLs.RemoveAt(i); //удаляем SL из памяти
                             CancelOrderDict.Remove(sell_sl.OrderId); //удаляем заявку из словаря на закрытие
-                            //TODO сообщение о том, что исполнение провалилось из-за отсутствия кэша
+                            Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, true, sell_sl); //сообщение о новой отмене заявке
                         }
                     }
                     else break;
@@ -1927,7 +1927,7 @@ namespace CoreCX.Trading
                         {
                             book.BuySLs.RemoveAt(i); //удаляем SL из памяти
                             CancelOrderDict.Remove(buy_sl.OrderId); //удаляем заявку из словаря на закрытие
-                            //TODO сообщение о том, что исполнение провалилось из-за отсутствия кэша
+                            Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, false, buy_sl); //сообщение о новой отмене заявке
                         }
                     }
                     else break;
@@ -2003,7 +2003,7 @@ namespace CoreCX.Trading
                         {
                             book.SellTPs.RemoveAt(i); //удаляем TP из памяти
                             CancelOrderDict.Remove(sell_tp.OrderId); //удаляем заявку из словаря на закрытие
-                            //TODO сообщение о том, что исполнение провалилось из-за отсутствия кэша
+                            Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, true, sell_tp); //сообщение о новой отмене заявке
                         }
                     }
                     else break;
@@ -2075,7 +2075,7 @@ namespace CoreCX.Trading
                         {
                             book.BuyTPs.RemoveAt(i); //удаляем TP из памяти
                             CancelOrderDict.Remove(buy_tp.OrderId); //удаляем заявку из словаря на закрытие
-                            //TODO сообщение о том, что исполнение провалилось из-за отсутствия кэша
+                            Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, false, buy_tp); //сообщение о новой отмене заявке
                         }
                     }
                     else break;
@@ -2159,7 +2159,7 @@ namespace CoreCX.Trading
                             {
                                 book.SellTSs.RemoveAt(i); //удаляем TS из памяти
                                 CancelOrderDict.Remove(sell_ts.OrderId); //удаляем заявку из словаря на закрытие
-                                //TODO сообщение о том, что исполнение провалилось из-за отсутствия кэша
+                                Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, true, sell_ts); //сообщение о новой отмене заявке
                             }
                         }
                     }
@@ -2239,7 +2239,7 @@ namespace CoreCX.Trading
                             {
                                 book.BuyTSs.RemoveAt(i); //удаляем TS из памяти
                                 CancelOrderDict.Remove(buy_ts.OrderId); //удаляем заявку из словаря на закрытие
-                                //TODO сообщение о том, что исполнение провалилось из-за отсутствия кэша
+                                Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, false, buy_ts); //сообщение о новой отмене заявке
                             }
                         }
                     }
