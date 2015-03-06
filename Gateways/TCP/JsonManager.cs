@@ -213,7 +213,7 @@ namespace CoreCX.Gateways.TCP
             return sb.ToString();
         }
 
-        internal static string FormTechJson(long func_call_id, int status_code, decimal max_leverage, decimal level_mc, decimal level_fl, decimal equity, decimal margin, decimal free_margin, decimal margin_level, int margin_call, int suspended)
+        internal static string FormTechJson(long func_call_id, int status_code, Account acc_pars)
         {
             StringBuilder sb = new StringBuilder();
             StringWriter sw = new StringWriter(sb);
@@ -229,23 +229,23 @@ namespace CoreCX.Gateways.TCP
                 if (status_code == 0)
                 {
                     writer.WritePropertyName("2");
-                    writer.WriteValue(max_leverage);
+                    writer.WriteValue(acc_pars.MaxLeverage);
                     writer.WritePropertyName("3");
-                    writer.WriteValue(level_mc);
+                    writer.WriteValue(acc_pars.LevelMC * 100m);
                     writer.WritePropertyName("4");
-                    writer.WriteValue(level_fl);
+                    writer.WriteValue(acc_pars.LevelFL * 100m);
                     writer.WritePropertyName("5");
-                    writer.WriteValue(equity);
+                    writer.WriteValue(acc_pars.Equity);
                     writer.WritePropertyName("6");
-                    writer.WriteValue(margin);
+                    writer.WriteValue(acc_pars.Margin);
                     writer.WritePropertyName("7");
-                    writer.WriteValue(free_margin);
+                    writer.WriteValue(acc_pars.FreeMargin);
                     writer.WritePropertyName("8");
-                    writer.WriteValue(margin_level);
+                    writer.WriteValue(acc_pars.MarginLevel);
                     writer.WritePropertyName("9");
-                    writer.WriteValue(margin_call);
+                    writer.WriteValue(acc_pars.MarginCall.ToInt32());
                     writer.WritePropertyName("10");
-                    writer.WriteValue(suspended);
+                    writer.WriteValue(acc_pars.Suspended.ToInt32());
                 }
 
                 writer.WriteEndObject();

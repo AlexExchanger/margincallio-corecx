@@ -249,15 +249,14 @@ namespace CoreCX.Gateways.TCP
                 case (int)FuncIds.GetAccountParameters: //получить значения параметров торгового счёта
                     {
                         int user_id;
-                        decimal max_leverage, level_mc, level_fl, equity, margin, free_margin, margin_level;
-                        bool margin_call, suspended;
+                        Account acc_pars;
                         if (int.TryParse(str_args[0], out user_id))
                         {
                             call = new FuncCall();
                             call.Action = () =>
                             {
-                                StatusCodes status = App.core.GetAccountParameters(user_id, out max_leverage, out level_mc, out level_fl, out equity, out margin, out free_margin, out margin_level, out margin_call, out suspended);
-                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, max_leverage, level_mc, level_fl, equity, margin, free_margin, margin_level, margin_call, suspended);
+                                StatusCodes status = App.core.GetAccountParameters(user_id, out acc_pars);
+                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, acc_pars);
                             };
                             Console.WriteLine("To queue core.GetAccountParameters(" + str_args[0] + ")");
                             break;

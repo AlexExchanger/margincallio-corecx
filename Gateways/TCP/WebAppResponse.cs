@@ -48,14 +48,14 @@ namespace CoreCX.Gateways.TCP
             });
         }
 
-        internal static void ReportExecRes(TcpClient client, long func_call_id, int status_code, decimal max_leverage, decimal level_mc, decimal level_fl, decimal equity, decimal margin, decimal free_margin, decimal margin_level, bool margin_call, bool suspended)
+        internal static void ReportExecRes(TcpClient client, long func_call_id, int status_code, Account acc_pars)
         {
             ThreadPool.QueueUserWorkItem(delegate
             {
-                SocketIO.Write(client, JsonManager.FormTechJson(func_call_id, status_code, max_leverage, level_mc, level_fl, equity, margin, free_margin, margin_level, margin_call.ToInt32(), suspended.ToInt32()));
+                SocketIO.Write(client, JsonManager.FormTechJson(func_call_id, status_code, acc_pars));
             });
         }
-
+        
         internal static void ReportExecRes(TcpClient client, long func_call_id, int status_code, List<string> strings)
         {
             ThreadPool.QueueUserWorkItem(delegate

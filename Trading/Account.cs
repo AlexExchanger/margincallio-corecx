@@ -18,7 +18,7 @@ namespace CoreCX.Trading
         internal bool MarginCall { get; set; } //флаг Margin Call
         internal bool Suspended { get; set; } //флаг блокировки торгового счёта
 
-        internal Account()
+        internal Account() //конструктор торгового счёта
         {
             BaseCFunds = new BaseFunds();
             DerivedCFunds = new Dictionary<string, DerivedFunds>(10);
@@ -31,6 +31,21 @@ namespace CoreCX.Trading
             MarginLevel = 0m;
             MarginCall = new bool();
             Suspended = new bool();
+        }
+
+        internal Account(Account acc) //конструктор копирования
+        {
+            BaseCFunds = null;
+            DerivedCFunds = null;
+            MaxLeverage = acc.MaxLeverage;
+            LevelMC = acc.LevelMC;
+            LevelFL = acc.LevelFL;
+            Equity = acc.Equity;
+            Margin = acc.Margin;
+            FreeMargin = acc.FreeMargin;
+            MarginLevel = acc.MarginLevel;
+            MarginCall = acc.MarginCall;
+            Suspended = acc.Suspended;
         }
     }
 }
