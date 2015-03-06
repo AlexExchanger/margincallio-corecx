@@ -40,14 +40,19 @@ namespace CoreCX.Gateways.TCP
             Queues.daemon_queue.Enqueue(new OrderMsg((int)order_event, (int)fc_source, func_call_id, derived_currency, side, order));
         }
 
-        internal static void NewOrderStatus(string derived_currency, long order_id, int user_id, OrderStatuses order_status) //new order status => DAEMON
+        internal static void NewOrderMatch(string derived_currency, long order_id, int user_id, decimal actual_amount, OrderStatuses order_status) //new order status => DAEMON
         {
-            Queues.daemon_queue.Enqueue(new OrderStatusMsg(derived_currency, order_id, user_id, (int)order_status));
+            Queues.daemon_queue.Enqueue(new OrderMatchMsg(derived_currency, order_id, user_id, actual_amount, (int)order_status));
         }
 
         internal static void NewTrade(string derived_currency, Trade trade) //new trade => DAEMON
         {
             Queues.daemon_queue.Enqueue(new TradeMsg(derived_currency, trade));
+        }
+
+        internal static void NewAccountFee(long func_call_id, int user_id, string derived_currency, decimal fee_in_perc) //new account fee => DAEMON
+        {
+            Queues.daemon_queue.Enqueue(new AccountFeeMsg(func_call_id, user_id, derived_currency, fee_in_perc));
         }
 
     }

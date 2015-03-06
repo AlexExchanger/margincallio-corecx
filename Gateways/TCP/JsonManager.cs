@@ -241,7 +241,7 @@ namespace CoreCX.Gateways.TCP
                     writer.WritePropertyName("7");
                     writer.WriteValue(acc_pars.FreeMargin);
                     writer.WritePropertyName("8");
-                    writer.WriteValue(acc_pars.MarginLevel);
+                    writer.WriteValue(acc_pars.MarginLevel * 100m);
                     writer.WritePropertyName("9");
                     writer.WriteValue(acc_pars.MarginCall.ToInt32());
                     writer.WritePropertyName("10");
@@ -668,7 +668,7 @@ namespace CoreCX.Gateways.TCP
             return sb.ToString();
         }
 
-        internal static string FormTechJson(int message_type, string derived_currency, long order_id, int user_id, int order_status, DateTime dt_made)
+        internal static string FormTechJson(int message_type, string derived_currency, long order_id, int user_id, decimal actual_amount, int order_status, DateTime dt_made)
         {
             StringBuilder sb = new StringBuilder();
             StringWriter sw = new StringWriter(sb);
@@ -685,8 +685,10 @@ namespace CoreCX.Gateways.TCP
                 writer.WritePropertyName("3");
                 writer.WriteValue(user_id);
                 writer.WritePropertyName("4");
-                writer.WriteValue(order_status);
+                writer.WriteValue(actual_amount);
                 writer.WritePropertyName("5");
+                writer.WriteValue(order_status);
+                writer.WritePropertyName("6");
                 writer.WriteValue(dt_made.Ticks);
                 writer.WriteEndObject();
             }
@@ -728,6 +730,32 @@ namespace CoreCX.Gateways.TCP
                 writer.WriteValue(trade.SellerFee);
                 writer.WritePropertyName("12");
                 writer.WriteValue(trade.DtMade.Ticks);
+                writer.WriteEndObject();
+            }
+
+            return sb.ToString();
+        }
+
+        internal static string FormTechJson(int message_type, long func_call_id, int user_id, string derived_currency, decimal fee_in_perc, DateTime dt_made)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter sw = new StringWriter(sb);
+
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("0");
+                writer.WriteValue(message_type);
+                writer.WritePropertyName("1");
+                writer.WriteValue(func_call_id);
+                writer.WritePropertyName("2");
+                writer.WriteValue(user_id);
+                writer.WritePropertyName("3");
+                writer.WriteValue(derived_currency);
+                writer.WritePropertyName("4");
+                writer.WriteValue(fee_in_perc);
+                writer.WritePropertyName("5");
+                writer.WriteValue(dt_made.Ticks);
                 writer.WriteEndObject();
             }
 

@@ -177,21 +177,11 @@ namespace CoreCX.Trading
                 {
                     decimal[] margin_pars = CalcAccMarginPars(acc); //расчёт маржинальных параметров юзера    
 
-                    if (margin_pars[2] > 0m) //проверка Free Margin
+                    if (margin_pars[1] == 0m) //юзер не использует заёмные средства (credit = 0)
                     {
                         if (currency == base_currency) //снятие базовой валюты
                         {
-                            if (margin_pars[1] == 0m) //юзер не использует заёмные средства
-                            {
-                                if (acc.BaseCFunds.AvailableFunds >= amount)
-                                {
-                                    acc.BaseCFunds.AvailableFunds -= amount;
-                                    Pusher.NewBalance(user_id, currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
-                                    return StatusCodes.Success;
-                                }
-                                else return StatusCodes.ErrorInsufficientFunds;
-                            }
-                            else if (margin_pars[2] >= amount) //юзер использует заёмные средства => проверяем Free Margin
+                            if (acc.BaseCFunds.AvailableFunds >= amount)
                             {
                                 acc.BaseCFunds.AvailableFunds -= amount;
                                 Pusher.NewBalance(user_id, currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
@@ -204,50 +194,18 @@ namespace CoreCX.Trading
                             DerivedFunds funds;
                             if (acc.DerivedCFunds.TryGetValue(currency, out funds))
                             {
-                                if (margin_pars[1] == 0m) //юзер не использует заёмные средства
+                                if (funds.AvailableFunds >= amount)
                                 {
-                                    if (funds.AvailableFunds >= amount)
-                                    {
-                                        funds.AvailableFunds -= amount;
-                                        Pusher.NewBalance(user_id, currency, funds.AvailableFunds, funds.BlockedFunds); //сообщение о новом балансе
-                                        return StatusCodes.Success;
-                                    }
-                                    else return StatusCodes.ErrorInsufficientFunds;
+                                    funds.AvailableFunds -= amount;
+                                    Pusher.NewBalance(user_id, currency, funds.AvailableFunds, funds.BlockedFunds); //сообщение о новом балансе
+                                    return StatusCodes.Success;
                                 }
-                                else
-                                {
-                                    //пересчёт свободной маржи в производную валюту
-                                    OrderBook book = OrderBooks[currency]; //получение стакана для пары с текущей производной валютой
-                                    decimal accumulated_amount = 0m; //в производной валюте
-                                    decimal accumulated_total = 0m; //в базовой валюте
-                                    for (int i = book.ActiveSellOrders.Count - 1; i >= 0; i--)
-                                    {
-                                        Order sell_ord = book.ActiveSellOrders[i];
-                                        accumulated_total += sell_ord.ActualAmount * sell_ord.Rate;
-                                        if (accumulated_total >= margin_pars[2]) //если накопленная сумма в заявках на продажу превышает величину свободной маржи
-                                        {
-                                            accumulated_amount += (margin_pars[2] - accumulated_total + sell_ord.ActualAmount * sell_ord.Rate) / sell_ord.Rate;
-                                            break;
-                                        }
-                                        else //если ещё не превышает - учитываем amount производной валюты
-                                        {
-                                            accumulated_amount += sell_ord.ActualAmount;
-                                        }
-                                    }
-
-                                    if (accumulated_amount >= amount)
-                                    {
-                                        funds.AvailableFunds -= amount;
-                                        Pusher.NewBalance(user_id, currency, funds.AvailableFunds, funds.BlockedFunds); //сообщение о новом балансе
-                                        return StatusCodes.Success;
-                                    }
-                                    else return StatusCodes.ErrorInsufficientFunds;
-                                }
+                                else return StatusCodes.ErrorInsufficientFunds;
                             }
                             else return StatusCodes.ErrorCurrencyNotFound;
                         }
                     }
-                    else return StatusCodes.ErrorInsufficientFunds;
+                    else return StatusCodes.ErrorBorrowedFundsUse;
                 }
                 else return StatusCodes.ErrorNegativeOrZeroValue;
             }
@@ -638,10 +596,28 @@ namespace CoreCX.Trading
             else return StatusCodes.ErrorAccountNotFound;
         }
 
-        //TODO SetAccountFee
+        internal StatusCodes SetAccountFee(int user_id, string derived_currency, decimal fee_in_perc, long func_call_id) //установить размер комиссии для торгового счёта
+        {
+            Account acc;
+            if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то получаем комиссию
+            {
+                DerivedFunds funds;
+                if (acc.DerivedCFunds.TryGetValue(derived_currency, out funds))
+                {
+                    if (fee_in_perc >= 0 && fee_in_perc <= 100) //проверка на корректность процентного значения
+                    {
+                        funds.Fee = fee_in_perc / 100m;
+                        Pusher.NewAccountFee(func_call_id, user_id, derived_currency, fee_in_perc); //сообщение о новой комиссии
 
-        //TODO GetAccountFee
-
+                        return StatusCodes.Success;
+                    }
+                    else return StatusCodes.ErrorIncorrectPercValue;
+                }
+                else return StatusCodes.ErrorCurrencyPairNotFound;
+            }
+            else return StatusCodes.ErrorAccountNotFound;
+        }
+        
         internal StatusCodes GetAccountBalance(int user_id, string currency, out BaseFunds funds) //получить баланс торгового счёта
         {
             funds = null;
@@ -701,74 +677,20 @@ namespace CoreCX.Trading
             else return StatusCodes.ErrorAccountNotFound;
         }
 
-        internal StatusCodes GetWithdrawalLimit(int user_id, string currency, out decimal amount) //получить лимит средств, доступных для вывода
+        internal StatusCodes GetAccountFee(int user_id, string derived_currency, out decimal fee_in_perc) //получить размер комиссии для торгового счёта
         {
-            amount = 0m;
+            fee_in_perc = 0m;
 
             Account acc;
-            if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то получаем информацию о доступных к снятию средствах
+            if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то получаем комиссию
             {
-                if (acc.Suspended) return StatusCodes.ErrorAccountSuspended; //проверка на блокировку счёта
-
-                decimal[] margin_pars = CalcAccMarginPars(acc); //расчёт маржинальных параметров юзера    
-
-                if (margin_pars[2] > 0m)
+                DerivedFunds funds;
+                if (acc.DerivedCFunds.TryGetValue(derived_currency, out funds))
                 {
-                    if (currency == base_currency) //расчёт базовой валюты
-                    {
-                        if (margin_pars[1] == 0m) //юзер не использует заёмные средства
-                        {
-                            amount = acc.BaseCFunds.AvailableFunds;
-                            return StatusCodes.Success;
-                        }
-                        else
-                        {
-                            amount = margin_pars[2];
-                            return StatusCodes.Success;
-                        }
-                    }
-                    else //расчёт производной валюты
-                    {
-                        DerivedFunds funds;
-                        if (acc.DerivedCFunds.TryGetValue(currency, out funds))
-                        {
-                            if (margin_pars[1] == 0m) //юзер не использует заёмные средства
-                            {
-                                amount = funds.AvailableFunds;
-                                return StatusCodes.Success;
-                            }
-                            else
-                            {
-                                //пересчёт свободной маржи в производную валюту
-                                OrderBook book = OrderBooks[currency]; //получение стакана для пары с текущей производной валютой
-                                decimal accumulated_amount = 0m; //в производной валюте
-                                decimal accumulated_total = 0m; //в базовой валюте
-                                for (int i = book.ActiveSellOrders.Count - 1; i >= 0; i--)
-                                {
-                                    Order sell_ord = book.ActiveSellOrders[i];
-                                    accumulated_total += sell_ord.ActualAmount * sell_ord.Rate;
-                                    if (accumulated_total >= margin_pars[2]) //если накопленная сумма в заявках на продажу превышает величину свободной маржи
-                                    {
-                                        accumulated_amount += (margin_pars[2] - accumulated_total + sell_ord.ActualAmount * sell_ord.Rate) / sell_ord.Rate;
-                                        break;
-                                    }
-                                    else //если ещё не превышает - учитываем amount производной валюты
-                                    {
-                                        accumulated_amount += sell_ord.ActualAmount;
-                                    }
-                                }
-
-                                amount = accumulated_amount;
-                                return StatusCodes.Success;
-                            }
-                        }
-                        else return StatusCodes.ErrorCurrencyNotFound;
-                    }
-                }
-                else
-                {
+                    fee_in_perc = funds.Fee * 100m;
                     return StatusCodes.Success;
                 }
+                else return StatusCodes.ErrorCurrencyPairNotFound;
             }
             else return StatusCodes.ErrorAccountNotFound;
         }
@@ -1394,7 +1316,7 @@ namespace CoreCX.Trading
 
                     //buy-заявка становится partially filled => уменьшается её ActualAmount
                     buy_ord.ActualAmount -= sell_ord.ActualAmount;
-                    Pusher.NewOrderStatus(derived_currency, buy_ord.OrderId, buy_ord.UserId, OrderStatuses.PartiallyFilled); //сообщение о новом статусе заявки
+                    Pusher.NewOrderMatch(derived_currency, buy_ord.OrderId, buy_ord.UserId, buy_ord.ActualAmount, OrderStatuses.PartiallyFilled); //сообщение о новом статусе заявки
                     
                     //увеличивается ActualAmount привязанных к sell-заявке SL/TP/TS заявок
                     if (sell_ord.StopLoss != null) sell_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
@@ -1403,7 +1325,7 @@ namespace CoreCX.Trading
 
                     //sell-заявка становится filled => её ActualAmount становится нулевым
                     sell_ord.ActualAmount = 0m;
-                    Pusher.NewOrderStatus(derived_currency, sell_ord.OrderId, sell_ord.UserId, OrderStatuses.Filled); //сообщение о новом статусе заявки                    
+                    Pusher.NewOrderMatch(derived_currency, sell_ord.OrderId, sell_ord.UserId, sell_ord.ActualAmount, OrderStatuses.Filled); //сообщение о новом статусе заявки                    
 
                     //FIX multicast
                     //FixMessager.NewMarketDataIncrementalRefresh(trade);
@@ -1444,7 +1366,7 @@ namespace CoreCX.Trading
 
                     //sell-заявка становится partially filled => уменьшается её ActualAmount
                     sell_ord.ActualAmount -= buy_ord.ActualAmount;
-                    Pusher.NewOrderStatus(derived_currency, sell_ord.OrderId, sell_ord.UserId, OrderStatuses.PartiallyFilled); //сообщение о новом статусе заявки
+                    Pusher.NewOrderMatch(derived_currency, sell_ord.OrderId, sell_ord.UserId, sell_ord.ActualAmount, OrderStatuses.PartiallyFilled); //сообщение о новом статусе заявки
 
                     //увеличивается ActualAmount привязанных к buy-заявке SL/TP/TS заявок
                     if (buy_ord.StopLoss != null) buy_ord.StopLoss.ActualAmount += buy_ord.ActualAmount;
@@ -1453,7 +1375,7 @@ namespace CoreCX.Trading
 
                     //buy-заявка становится filled => её ActualAmount становится нулевым
                     buy_ord.ActualAmount = 0m;
-                    Pusher.NewOrderStatus(derived_currency, buy_ord.OrderId, buy_ord.UserId, OrderStatuses.Filled); //сообщение о новом статусе заявки
+                    Pusher.NewOrderMatch(derived_currency, buy_ord.OrderId, buy_ord.UserId, buy_ord.ActualAmount, OrderStatuses.Filled); //сообщение о новом статусе заявки
 
                     //FIX multicast
                     //FixMessager.NewMarketDataIncrementalRefresh(trade);
@@ -1494,7 +1416,7 @@ namespace CoreCX.Trading
 
                     //buy-заявка становится filled => её ActualAmount становится нулевым
                     buy_ord.ActualAmount = 0m;
-                    Pusher.NewOrderStatus(derived_currency, buy_ord.OrderId, buy_ord.UserId, OrderStatuses.Filled); //сообщение о новом статусе заявки
+                    Pusher.NewOrderMatch(derived_currency, buy_ord.OrderId, buy_ord.UserId, buy_ord.ActualAmount, OrderStatuses.Filled); //сообщение о новом статусе заявки
 
                     //увеличивается ActualAmount привязанных к sell-заявке SL/TP/TS заявок
                     if (sell_ord.StopLoss != null) sell_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
@@ -1503,7 +1425,7 @@ namespace CoreCX.Trading
 
                     //sell-заявка становится filled => её ActualAmount становится нулевым
                     sell_ord.ActualAmount = 0m;
-                    Pusher.NewOrderStatus(derived_currency, sell_ord.OrderId, sell_ord.UserId, OrderStatuses.Filled); //сообщение о новом статусе заявки
+                    Pusher.NewOrderMatch(derived_currency, sell_ord.OrderId, sell_ord.UserId, sell_ord.ActualAmount, OrderStatuses.Filled); //сообщение о новом статусе заявки
 
                     //FIX multicast
                     //FixMessager.NewMarketDataIncrementalRefresh(trade);

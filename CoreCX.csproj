@@ -55,13 +55,14 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="FuncCall.cs" />
     <Compile Include="Gateways\TCP\JsonManager.cs" />
+    <Compile Include="Gateways\TCP\Messages\AccountFeeMsg.cs" />
     <Compile Include="Gateways\TCP\Messages\ActiveTopMsg.cs" />
     <Compile Include="Gateways\TCP\Messages\BalanceMsg.cs" />
     <Compile Include="Gateways\TCP\Messages\IJsonSerializable.cs" />
     <Compile Include="Gateways\TCP\Messages\MarginCallMsg.cs" />
     <Compile Include="Gateways\TCP\Messages\MarginInfoMsg.cs" />
     <Compile Include="Gateways\TCP\Messages\OrderMsg.cs" />
-    <Compile Include="Gateways\TCP\Messages\OrderStatusMsg.cs" />
+    <Compile Include="Gateways\TCP\Messages\OrderMatchMsg.cs" />
     <Compile Include="Gateways\TCP\Messages\TickerMsg.cs" />
     <Compile Include="Gateways\TCP\Messages\TradeMsg.cs" />
     <Compile Include="Gateways\TCP\Pusher.cs" />

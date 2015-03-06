@@ -211,6 +211,28 @@ namespace CoreCX.Gateways.TCP
                         }
                     }
 
+                case (int)FuncIds.SetAccountFee: //установить размер комиссии для торгового счёта
+                    {
+                        int user_id;
+                        decimal fee_in_perc;
+                        if (int.TryParse(str_args[0], out user_id) && !String.IsNullOrEmpty(str_args[1]) && decimal.TryParse(str_args[2], out fee_in_perc))
+                        {
+                            call = new FuncCall();
+                            call.Action = () =>
+                            {
+                                StatusCodes status = App.core.SetAccountFee(user_id, str_args[1], fee_in_perc, call.FuncCallId);
+                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
+                            };
+                            Console.WriteLine("To queue core.SetAccountFee(" + str_args[0] + ", " + str_args[1] + ", " + str_args[2] + ")");
+                            break;
+                        }
+                        else
+                        {
+                            WebAppResponse.RejectInvalidFuncArgs(client);
+                            return;
+                        }
+                    }
+
                 case (int)FuncIds.GetAccountBalance: //получить баланс торгового счёта
                     {
                         int user_id;
@@ -268,19 +290,19 @@ namespace CoreCX.Gateways.TCP
                         }
                     }
 
-                case (int)FuncIds.GetWithdrawalLimit: //получить лимит средств, доступных для вывода
+                case (int)FuncIds.GetAccountFee: //получить размер комиссии для торгового счёта
                     {
                         int user_id;
-                        decimal amount;
+                        decimal fee_in_perc;
                         if (int.TryParse(str_args[0], out user_id) && !String.IsNullOrEmpty(str_args[1]))
                         {
                             call = new FuncCall();
                             call.Action = () =>
                             {
-                                StatusCodes status = App.core.GetWithdrawalLimit(user_id, str_args[1], out amount);
-                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, amount);
+                                StatusCodes status = App.core.GetAccountFee(user_id, str_args[1], out fee_in_perc);
+                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, fee_in_perc);
                             };
-                            Console.WriteLine("To queue core.GetWithdrawalLimit(" + str_args[0] + ", " + str_args[1] + ")");
+                            Console.WriteLine("To queue core.GetAccountFee(" + str_args[0] + ", " + str_args[1] + ")");
                             break;
                         }
                         else

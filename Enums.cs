@@ -16,7 +16,7 @@ namespace CoreCX
 
         GetAccountBalance = 2400,
         GetAccountParameters = 2500,
-        GetWithdrawalLimit = 2600,
+        GetAccountFee = 2600,
         GetOpenOrders = 2700,
         GetOrderInfo = 2800,
         
@@ -106,9 +106,9 @@ namespace CoreCX
         NewTicker = 3,
         NewOrderBookTop = 4,
         NewOrder = 5,
-        NewOrderStatus = 6,
-        NewTrade = 7
-        //TODO NewAccountFee // + func_call_id
+        NewOrderMatch = 6,
+        NewTrade = 7,
+        NewAccountFee = 8
     }
 
     internal enum FCSources
