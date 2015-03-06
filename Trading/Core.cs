@@ -553,7 +553,7 @@ namespace CoreCX.Trading
                                 int buy_index = ord_canc_data.Book.BuyTSs.FindIndex(i => i.OrderId == order_id);
                                 if (buy_index >= 0) //заявка найдена в стакане на покупку
                                 {
-                                    Order buy_order = ord_canc_data.Book.BuyTSs[buy_index];
+                                    TSOrder buy_order = ord_canc_data.Book.BuyTSs[buy_index];
                                     if (buy_order.UserId == user_id) //данная заявка принадлежит данному юзеру
                                     {
                                         ord_canc_data.Book.RemoveBuyTS(buy_index);
@@ -572,7 +572,7 @@ namespace CoreCX.Trading
                                 int sell_index = ord_canc_data.Book.SellTSs.FindIndex(i => i.OrderId == order_id);
                                 if (sell_index >= 0) //заявка найдена в стакане на продажу
                                 {
-                                    Order sell_order = ord_canc_data.Book.SellTSs[sell_index];
+                                    TSOrder sell_order = ord_canc_data.Book.SellTSs[sell_index];
                                     if (sell_order.UserId == user_id) //данная заявка принадлежит данному юзеру
                                     {
                                         ord_canc_data.Book.RemoveSellTS(sell_index);
@@ -697,20 +697,29 @@ namespace CoreCX.Trading
 
         internal StatusCodes GetOpenOrders(int user_id, string derived_currency, out List<Order> buy_limit, out List<Order> sell_limit, out List<Order> buy_sl, out List<Order> sell_sl, out List<Order> buy_tp, out List<Order> sell_tp, out List<TSOrder> buy_ts, out List<TSOrder> sell_ts) //получить открытые заявки
         {
-            buy_limit = new List<Order>();
-            sell_limit = new List<Order>();
-            buy_sl = new List<Order>();
-            sell_sl = new List<Order>();
-            buy_tp = new List<Order>();
-            sell_tp = new List<Order>();
-            buy_ts = new List<TSOrder>();
-            sell_ts = new List<TSOrder>();
+            buy_limit = null;
+            sell_limit = null;
+            buy_sl = null;
+            sell_sl = null;
+            buy_tp = null;
+            sell_tp = null;
+            buy_ts = null;
+            sell_ts = null;
 
             if (Accounts.ContainsKey(user_id)) //если счёт существует, то получаем активные заявки
             {
                 OrderBook book;
                 if (OrderBooks.TryGetValue(derived_currency, out book)) //проверка на существование стакана
                 {
+                    buy_limit = new List<Order>();
+                    sell_limit = new List<Order>();
+                    buy_sl = new List<Order>();
+                    sell_sl = new List<Order>();
+                    buy_tp = new List<Order>();
+                    sell_tp = new List<Order>();
+                    buy_ts = new List<TSOrder>();
+                    sell_ts = new List<TSOrder>();
+
                     for (int i = book.ActiveBuyOrders.Count - 1; i >= 0; i--)
                     {
                         Order cur_ord = book.ActiveBuyOrders[i];
@@ -779,6 +788,177 @@ namespace CoreCX.Trading
                     return StatusCodes.Success;
                 }
                 else return StatusCodes.ErrorCurrencyPairNotFound;
+            }
+            else return StatusCodes.ErrorAccountNotFound;
+        }
+
+        internal StatusCodes GetOrderInfo(int user_id, long order_id, out string derived_currency, out bool side, out Order order) //получить параметры заявки
+        {            
+            derived_currency = null;
+            side = new bool();
+            order = null;
+
+            Account acc;
+            if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то получаем параметры заявки
+            {
+                if (order_id > 0) //проверка на положительность ID заявки
+                {
+                    CancOrdData ord_canc_data;
+                    if (CancelOrderDict.TryGetValue(order_id, out ord_canc_data))
+                    {
+                        if (ord_canc_data.OrderType == CancOrdTypes.Limit)
+                        {
+                            if (!ord_canc_data.Side) //получаем параметры заявки на покупку
+                            {
+                                int buy_index = ord_canc_data.Book.ActiveBuyOrders.FindIndex(i => i.OrderId == order_id);
+                                if (buy_index >= 0) //заявка найдена в стакане на покупку
+                                {
+                                    Order buy_order = ord_canc_data.Book.ActiveBuyOrders[buy_index];
+                                    if (buy_order.UserId == user_id) //данная заявка принадлежит данному юзеру
+                                    {
+                                        derived_currency = ord_canc_data.DerivedCurrency;
+                                        side = ord_canc_data.Side;
+                                        order = new Order(buy_order);
+                                        return StatusCodes.Success;
+                                    }
+                                    else return StatusCodes.ErrorCrossUserAccessDenied;
+                                }
+                                else return StatusCodes.ErrorOrderNotFound;
+                            }
+                            else //нужно отменить заявку на продажу
+                            {
+                                int sell_index = ord_canc_data.Book.ActiveSellOrders.FindIndex(i => i.OrderId == order_id);
+                                if (sell_index >= 0) //заявка найдена в стакане на продажу
+                                {
+                                    Order sell_order = ord_canc_data.Book.ActiveSellOrders[sell_index];
+                                    if (sell_order.UserId == user_id) //данная заявка принадлежит данному юзеру
+                                    {
+                                        derived_currency = ord_canc_data.DerivedCurrency;
+                                        side = ord_canc_data.Side;
+                                        order = new Order(sell_order);
+                                        return StatusCodes.Success;
+                                    }
+                                    else return StatusCodes.ErrorCrossUserAccessDenied;
+                                }
+                                else return StatusCodes.ErrorOrderNotFound;
+                            }
+                        }
+                        else if (ord_canc_data.OrderType == CancOrdTypes.StopLoss)
+                        {
+                            if (!ord_canc_data.Side) //получаем параметры SL на покупку
+                            {
+                                int buy_index = ord_canc_data.Book.BuySLs.FindIndex(i => i.OrderId == order_id);
+                                if (buy_index >= 0) //заявка найдена в стакане на покупку
+                                {
+                                    Order buy_order = ord_canc_data.Book.BuySLs[buy_index];
+                                    if (buy_order.UserId == user_id) //данная заявка принадлежит данному юзеру
+                                    {
+                                        derived_currency = ord_canc_data.DerivedCurrency;
+                                        side = ord_canc_data.Side;
+                                        order = new Order(buy_order);
+                                        return StatusCodes.Success;
+                                    }
+                                    else return StatusCodes.ErrorCrossUserAccessDenied;
+                                }
+                                else return StatusCodes.ErrorOrderNotFound;
+                            }
+                            else //получаем параметры SL на продажу
+                            {
+                                int sell_index = ord_canc_data.Book.SellSLs.FindIndex(i => i.OrderId == order_id);
+                                if (sell_index >= 0) //заявка найдена в стакане на продажу
+                                {
+                                    Order sell_order = ord_canc_data.Book.SellSLs[sell_index];
+                                    if (sell_order.UserId == user_id) //данная заявка принадлежит данному юзеру
+                                    {
+                                        derived_currency = ord_canc_data.DerivedCurrency;
+                                        side = ord_canc_data.Side;
+                                        order = new Order(sell_order);
+                                        return StatusCodes.Success;
+                                    }
+                                    else return StatusCodes.ErrorCrossUserAccessDenied;
+                                }
+                                else return StatusCodes.ErrorOrderNotFound;
+                            }
+                        }
+                        else if (ord_canc_data.OrderType == CancOrdTypes.TakeProfit)
+                        {
+                            if (!ord_canc_data.Side) //получаем параметры TP на покупку
+                            {
+                                int buy_index = ord_canc_data.Book.BuyTPs.FindIndex(i => i.OrderId == order_id);
+                                if (buy_index >= 0) //заявка найдена в стакане на покупку
+                                {
+                                    Order buy_order = ord_canc_data.Book.BuyTPs[buy_index];
+                                    if (buy_order.UserId == user_id) //данная заявка принадлежит данному юзеру
+                                    {
+                                        derived_currency = ord_canc_data.DerivedCurrency;
+                                        side = ord_canc_data.Side;
+                                        order = new Order(buy_order);
+                                        return StatusCodes.Success;
+                                    }
+                                    else return StatusCodes.ErrorCrossUserAccessDenied;
+                                }
+                                else return StatusCodes.ErrorOrderNotFound;
+                            }
+                            else //получаем параметры TP на продажу
+                            {
+                                int sell_index = ord_canc_data.Book.SellTPs.FindIndex(i => i.OrderId == order_id);
+                                if (sell_index >= 0) //заявка найдена в стакане на продажу
+                                {
+                                    Order sell_order = ord_canc_data.Book.SellTPs[sell_index];
+                                    if (sell_order.UserId == user_id) //данная заявка принадлежит данному юзеру
+                                    {
+                                        derived_currency = ord_canc_data.DerivedCurrency;
+                                        side = ord_canc_data.Side;
+                                        order = new Order(sell_order);
+                                        return StatusCodes.Success;
+                                    }
+                                    else return StatusCodes.ErrorCrossUserAccessDenied;
+                                }
+                                else return StatusCodes.ErrorOrderNotFound;
+                            }
+                        }
+                        else if (ord_canc_data.OrderType == CancOrdTypes.TrailingStop)
+                        {
+                            if (!ord_canc_data.Side) //получаем параметры TS на покупку
+                            {
+                                int buy_index = ord_canc_data.Book.BuyTSs.FindIndex(i => i.OrderId == order_id);
+                                if (buy_index >= 0) //заявка найдена в стакане на покупку
+                                {
+                                    TSOrder buy_order = ord_canc_data.Book.BuyTSs[buy_index];
+                                    if (buy_order.UserId == user_id) //данная заявка принадлежит данному юзеру
+                                    {
+                                        derived_currency = ord_canc_data.DerivedCurrency;
+                                        side = ord_canc_data.Side;
+                                        order = new TSOrder(buy_order, buy_order.Offset);
+                                        return StatusCodes.Success;
+                                    }
+                                    else return StatusCodes.ErrorCrossUserAccessDenied;
+                                }
+                                else return StatusCodes.ErrorOrderNotFound;
+                            }
+                            else //получаем параметры TS на продажу
+                            {
+                                int sell_index = ord_canc_data.Book.SellTSs.FindIndex(i => i.OrderId == order_id);
+                                if (sell_index >= 0) //заявка найдена в стакане на продажу
+                                {
+                                    TSOrder sell_order = ord_canc_data.Book.SellTSs[sell_index];
+                                    if (sell_order.UserId == user_id) //данная заявка принадлежит данному юзеру
+                                    {
+                                        derived_currency = ord_canc_data.DerivedCurrency;
+                                        side = ord_canc_data.Side;
+                                        order = new TSOrder(sell_order, sell_order.Offset);
+                                        return StatusCodes.Success;
+                                    }
+                                    else return StatusCodes.ErrorCrossUserAccessDenied;
+                                }
+                                else return StatusCodes.ErrorOrderNotFound;
+                            }
+                        }
+                        else return StatusCodes.ErrorOrderNotFound;
+                    }
+                    else return StatusCodes.ErrorOrderNotFound;
+                }
+                else return StatusCodes.ErrorNegativeOrZeroId;
             }
             else return StatusCodes.ErrorAccountNotFound;
         }
@@ -854,8 +1034,8 @@ namespace CoreCX.Trading
 
         internal StatusCodes GetDepth(string derived_currency, int limit, out List<OrderBuf> bids, out List<OrderBuf> asks, out decimal bids_vol, out decimal asks_vol, out int bids_num, out int asks_num) //получить стаканы
         {
-            bids = new List<OrderBuf>();
-            asks = new List<OrderBuf>();
+            bids = null;
+            asks = null;
             bids_vol = 0m;
             asks_vol = 0m;
             bids_num = 0;
@@ -866,6 +1046,9 @@ namespace CoreCX.Trading
             {
                 if (limit > 0) //проверка на положительность лимита
                 {
+                    bids = new List<OrderBuf>();
+                    asks = new List<OrderBuf>();
+
                     //получаем заявки на покупку
                     if (book.ActiveBuyOrders.Count > 0)
                     {

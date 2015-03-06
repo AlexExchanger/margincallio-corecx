@@ -335,7 +335,30 @@ namespace CoreCX.Gateways.TCP
                         }
                     }
 
-                    //TODO GetOrderInfo
+                case (int)FuncIds.GetOrderInfo: //получить параметры заявки
+                    {
+                        int user_id;
+                        long order_id;
+                        string derived_currency;
+                        bool side;
+                        Order order;
+                        if (int.TryParse(str_args[0], out user_id) && long.TryParse(str_args[1], out order_id))
+                        {
+                            call = new FuncCall();
+                            call.Action = () =>
+                            {
+                                StatusCodes status = App.core.GetOrderInfo(user_id, order_id, out derived_currency, out side, out order);
+                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, derived_currency, side, order);
+                            };
+                            Console.WriteLine("To queue core.GetOrderInfo(" + str_args[0] + ", " + str_args[1] + ")");
+                            break;
+                        }
+                        else
+                        {
+                            WebAppResponse.RejectInvalidFuncArgs(client);
+                            return;
+                        }
+                    }
 
 
                 case (int)FuncIds.CreateCurrencyPair:

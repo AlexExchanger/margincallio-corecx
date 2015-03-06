@@ -434,6 +434,57 @@ namespace CoreCX.Gateways.TCP
             return sb.ToString();
         }
 
+        internal static string FormTechJson(long func_call_id, int status_code, string derived_currency, bool side, Order order)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter sw = new StringWriter(sb);
+
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("0");
+                writer.WriteValue(func_call_id);
+                writer.WritePropertyName("1");
+                writer.WriteValue(status_code);
+
+                if (status_code == 0)
+                {
+                    writer.WritePropertyName("2");
+                    writer.WriteValue(derived_currency);
+                    writer.WritePropertyName("3");
+                    writer.WriteValue(order.OrderId);
+                    writer.WritePropertyName("4");
+                    writer.WriteValue(order.UserId);
+                    writer.WritePropertyName("5");
+                    writer.WriteValue(side.ToInt32());
+                    writer.WritePropertyName("6");
+                    writer.WriteValue(order.OriginalAmount);
+                    writer.WritePropertyName("7");
+                    writer.WriteValue(order.ActualAmount);
+                    writer.WritePropertyName("8");
+                    writer.WriteValue(order.Rate);
+
+                    TSOrder ts_order = order as TSOrder;
+                    if (ts_order == null)
+                    {
+                        writer.WritePropertyName("9");
+                        writer.WriteValue(order.DtMade.Ticks);
+                    }
+                    else
+                    {
+                        writer.WritePropertyName("9");
+                        writer.WriteValue(ts_order.Offset);
+                        writer.WritePropertyName("10");
+                        writer.WriteValue(ts_order.DtMade.Ticks);
+                    }
+                }
+
+                writer.WriteEndObject();
+            }
+
+            return sb.ToString();
+        }
+
         internal static string FormTechJson(long func_call_id, int status_code, List<OrderBuf> bids, List<OrderBuf> asks, decimal bids_vol, decimal asks_vol, int bids_num, int asks_num)
         {
             StringBuilder sb = new StringBuilder();

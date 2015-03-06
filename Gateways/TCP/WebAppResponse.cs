@@ -72,6 +72,14 @@ namespace CoreCX.Gateways.TCP
             });
         }
 
+        internal static void ReportExecRes(TcpClient client, long func_call_id, int status_code, string derived_currency, bool side, Order order)
+        {
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                SocketIO.Write(client, JsonManager.FormTechJson(func_call_id, status_code, derived_currency, side, order));
+            });
+        }
+
         internal static void ReportExecRes(TcpClient client, long func_call_id, int status_code, List<OrderBuf> bids, List<OrderBuf> asks, decimal bids_vol, decimal asks_vol, int bids_num, int asks_num)
         {
             ThreadPool.QueueUserWorkItem(delegate
