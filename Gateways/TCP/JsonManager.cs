@@ -151,7 +151,68 @@ namespace CoreCX.Gateways.TCP
 
             return sb.ToString();
         }
-        
+
+        internal static string FormTechJson(long func_call_id, int status_code, BaseFunds funds)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter sw = new StringWriter(sb);
+
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("0");
+                writer.WriteValue(func_call_id);
+                writer.WritePropertyName("1");
+                writer.WriteValue(status_code);
+
+                if (status_code == 0)
+                {
+                    writer.WritePropertyName("2");
+                    writer.WriteValue(funds.AvailableFunds);
+                    writer.WritePropertyName("3");
+                    writer.WriteValue(funds.BlockedFunds);
+                }
+
+                writer.WriteEndObject();
+            }
+
+            return sb.ToString();
+        }
+
+        internal static string FormTechJson(long func_call_id, int status_code, Dictionary<string, BaseFunds> funds)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter sw = new StringWriter(sb);
+
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("0");
+                writer.WriteValue(func_call_id);
+                writer.WritePropertyName("1");
+                writer.WriteValue(status_code);
+
+                if (status_code == 0)
+                {
+                    writer.WritePropertyName("2");
+                    writer.WriteStartArray();
+                    foreach (KeyValuePair<string, BaseFunds> val in funds)
+                    {
+                        writer.WriteStartArray();
+                        writer.WriteValue(val.Key);
+                        writer.WriteValue(val.Value.AvailableFunds);
+                        writer.WriteValue(val.Value.BlockedFunds);
+                        writer.WriteEndArray();
+                    }
+                    writer.WriteEndArray();
+                }
+
+                writer.WriteEndObject();
+            }
+
+            return sb.ToString();
+        }
+
         internal static string FormTechJson(long func_call_id, int status_code, decimal max_leverage, decimal level_mc, decimal level_fl, decimal equity, decimal margin, decimal free_margin, decimal margin_level, int margin_call, int suspended)
         {
             StringBuilder sb = new StringBuilder();

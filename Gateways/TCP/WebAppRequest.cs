@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net.Sockets;
 using CoreCX.Trading;
+using CoreCX.Recovery;
 
 namespace CoreCX.Gateways.TCP
 {
@@ -210,19 +211,32 @@ namespace CoreCX.Gateways.TCP
                         }
                     }
 
-                case (int)FuncIds.GetAccountBalance: //получить баланс торгового счёта для заданной пары
+                case (int)FuncIds.GetAccountBalance: //получить баланс торгового счёта
                     {
                         int user_id;
-                        decimal available, blocked;
-                        if (int.TryParse(str_args[0], out user_id) && !String.IsNullOrEmpty(str_args[1]))
+                        if (int.TryParse(str_args[0], out user_id))
                         {
                             call = new FuncCall();
-                            call.Action = () =>
+                            if (!String.IsNullOrEmpty(str_args[1])) //задана валюта (получаем баланс по 1-ой валюте)
                             {
-                                StatusCodes status = App.core.GetAccountBalance(user_id, str_args[1], out available, out blocked);
-                                WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, available, blocked);
-                            };
-                            Console.WriteLine("To queue core.GetAccountBalance(" + str_args[0] + ", " + str_args[1] + ")");
+                                BaseFunds funds;
+                                call.Action = () =>
+                                {
+                                    StatusCodes status = App.core.GetAccountBalance(user_id, str_args[1], out funds);
+                                    WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, funds);
+                                };
+                                Console.WriteLine("To queue core.GetAccountBalance(" + str_args[0] + ", " + str_args[1] + ")");
+                            }
+                            else //валюта не задана (получаем баланс по всем валютам)
+                            {
+                                Dictionary<string, BaseFunds> funds;
+                                call.Action = () =>
+                                {
+                                    StatusCodes status = App.core.GetAccountBalance(user_id, out funds);
+                                    WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, funds);
+                                };
+                                Console.WriteLine("To queue core.GetAccountBalance(" + str_args[0] + ")");
+                            }                            
                             break;
                         }
                         else
@@ -398,6 +412,33 @@ namespace CoreCX.Gateways.TCP
 
 
 
+
+
+
+
+                case (int)FuncIds.BackupCore:
+                    {
+                        call = new FuncCall();
+                        call.Action = () =>
+                        {
+                            StatusCodes status = Snapshot.BackupCore(true);
+                            WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
+                        };
+                        Console.WriteLine("To queue Snapshot.BackupCore()");
+                        break;
+                    }
+
+                case (int)FuncIds.RestoreCore:
+                    {
+                        call = new FuncCall();
+                        call.Action = () =>
+                        {
+                            StatusCodes status = Snapshot.RestoreCore(true);
+                            WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
+                        };
+                        Console.WriteLine("To queue Snapshot.RestoreCore()");
+                        break;
+                    }
 
                 default:
                     {

@@ -71,6 +71,7 @@
     <Compile Include="Gateways\TCP\WebAppResponse.cs" />
     <Compile Include="Processor.cs" />
     <Compile Include="Queues.cs" />
+    <Compile Include="Recovery\Snapshot.cs" />
     <Compile Include="Trading\Account.cs" />
     <Compile Include="App.cs" />
     <Compile Include="Trading\ApiKey.cs" />
@@ -93,7 +94,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Gateways\FIX\" />
-    <Folder Include="Recovery\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="favicon.ico" />

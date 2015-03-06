@@ -26,7 +26,10 @@ namespace CoreCX
         DeleteCurrencyPair = 5300,
 
         GetTicker = 7000,
-        GetDepth = 7100
+        GetDepth = 7100,
+
+        BackupCore = 9000,
+        RestoreCore = 9100
     }
 
     internal enum MarketClosedForbiddenFuncIds

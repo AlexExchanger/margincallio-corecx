@@ -619,27 +619,24 @@ namespace CoreCX.Trading
 
         //TODO GetAccountFee
 
-        internal StatusCodes GetAccountBalance(int user_id, string currency, out decimal available, out decimal blocked) //получить баланс торгового счёта
+        internal StatusCodes GetAccountBalance(int user_id, string currency, out BaseFunds funds) //получить баланс торгового счёта
         {
-            available = 0m;
-            blocked = 0m;
+            funds = new BaseFunds();
 
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то получаем баланс
             {
                 if (currency == base_currency) //баланс базовой валюты
                 {
-                    available = acc.BaseCFunds.AvailableFunds;
-                    blocked = acc.BaseCFunds.BlockedFunds;
+                    funds = new BaseFunds(acc.BaseCFunds);
                     return StatusCodes.Success;
                 }
                 else //баланс производной валюты
                 {
-                    DerivedFunds funds;
-                    if (acc.DerivedCFunds.TryGetValue(currency, out funds))
+                    DerivedFunds derived_funds;
+                    if (acc.DerivedCFunds.TryGetValue(currency, out derived_funds))
                     {
-                        available = funds.AvailableFunds;
-                        blocked = funds.BlockedFunds;
+                        funds = new BaseFunds(derived_funds);
                         return StatusCodes.Success;
                     }
                     else return StatusCodes.ErrorCurrencyNotFound;
@@ -648,15 +645,19 @@ namespace CoreCX.Trading
             else return StatusCodes.ErrorAccountNotFound;
         }
 
-        internal StatusCodes GetAccountBalance(int user_id, List<BaseFunds> all_funds) //получить все балансы торгового счёта
+        internal StatusCodes GetAccountBalance(int user_id, out Dictionary<string, BaseFunds> funds) //получить все балансы торгового счёта
         {
-            all_funds = new List<BaseFunds>();
+            funds = new Dictionary<string, BaseFunds>();
 
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то получаем баланс
             {
-                all_funds.Add(new BaseFunds(acc.BaseCFunds));
-                //TODO
+                funds.Add(base_currency, new BaseFunds(acc.BaseCFunds));
+                
+                foreach (KeyValuePair<string, DerivedFunds> derived_funds in acc.DerivedCFunds)
+                {
+                    funds.Add(derived_funds.Key, new BaseFunds(derived_funds.Value));
+                }
 
                 return StatusCodes.Success;
             }
