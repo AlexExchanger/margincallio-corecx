@@ -5,7 +5,7 @@ namespace CoreCX.Trading
     [Serializable]
     class Trade
     {
-        private static long next_id; //в целях автоинкремента id сделки
+        internal static long next_id; //в целях автоинкремента id сделки
         internal long TradeId { get; private set; }
         internal long BuyOrderId { get; private set; }
         internal long SellOrderId { get; private set; }

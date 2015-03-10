@@ -13,8 +13,14 @@ namespace CoreCX.Recovery
             {
                 try
                 {
+                    using (StreamWriter sw = new StreamWriter(new FileStream(@"recovery\ids.dat", FileMode.Create, FileAccess.Write, FileShare.None)))
+                    {
+                        sw.WriteLine(Order.next_id);
+                        sw.WriteLine(Trade.next_id);
+                    }
+
                     BinaryFormatter formatter = new BinaryFormatter();
-                    FileStream fs = new FileStream("Core.bin", FileMode.Create, FileAccess.Write, FileShare.None);
+                    FileStream fs = new FileStream(@"recovery\core.bin", FileMode.Create, FileAccess.Write, FileShare.None);
                     formatter.Serialize(fs, App.core);
                     fs.Close();
                 }
@@ -40,8 +46,14 @@ namespace CoreCX.Recovery
             {
                 try
                 {
+                    using (StreamReader sr = new StreamReader(new FileStream(@"recovery\ids.dat", FileMode.Open, FileAccess.Read, FileShare.Read)))
+                    {
+                        Order.next_id = long.Parse(sr.ReadLine());
+                        Trade.next_id = long.Parse(sr.ReadLine());
+                    }
+
                     BinaryFormatter formatter = new BinaryFormatter();
-                    FileStream fs = new FileStream("Core.bin", FileMode.Open, FileAccess.Read, FileShare.Read);
+                    FileStream fs = new FileStream(@"recovery\core.bin", FileMode.Open, FileAccess.Read, FileShare.Read);
                     App.core = (Core)formatter.Deserialize(fs);
                     fs.Close();
                 }

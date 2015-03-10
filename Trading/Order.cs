@@ -5,7 +5,7 @@ namespace CoreCX.Trading
     [Serializable]
     class Order
     {
-        private static long next_id; //в целях автоинкремента id заявки
+        internal static long next_id; //в целях автоинкремента id заявки
         internal long OrderId { get; private set; }
         internal int UserId { get; private set; }
         internal decimal OriginalAmount { get; private set; }

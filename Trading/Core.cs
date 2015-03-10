@@ -52,7 +52,7 @@ namespace CoreCX.Trading
         internal StatusCodes CreateAccount(int user_id) //открыть торговый счёт
         {
             //реплицировать
-
+            
             if (!Accounts.ContainsKey(user_id)) //если счёт ещё не открыт, то открываем
             {
                 Account acc = new Account(); //открываем счёт в базовой валюте
@@ -1107,7 +1107,7 @@ namespace CoreCX.Trading
         #endregion
 
         #endregion
-
+        
         #region SERVICE CORE FUNCTIONS
 
         #region ORDER MANAGEMENT
