@@ -20,7 +20,7 @@ namespace CoreCX
                 FuncCall stdf_call;
                 if (Queues.stdf_queue.TryDequeue(out stdf_call))
                 {
-                    Console.WriteLine("MAIN THREAD: EXECUTING STDF ITEM");
+                    Console.WriteLine(DateTime.Now + " MAIN THREAD: EXECUTING STDF ITEM");
                     try
                     {
                         stdf_call.Action();
@@ -33,7 +33,7 @@ namespace CoreCX
                 Action prdf_action;
                 if (Queues.prdf_queue.TryDequeue(out prdf_action))
                 {
-                    //Console.WriteLine("MAIN THREAD: EXECUTING PRDF ITEM");                    
+                    //Console.WriteLine(DateTime.Now + " MAIN THREAD: EXECUTING PRDF ITEM");                    
                     try
                     {
                         prdf_action();

@@ -20,12 +20,12 @@ namespace CoreCX.Recovery
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("==BACKUP CORE SNAPSHOT ERROR==");
+                    Console.WriteLine(DateTime.Now + " ==BACKUP CORE SNAPSHOT ERROR==");
                     Console.WriteLine(e.ToString());
                     return StatusCodes.ErrorSnapshotBackupFailed;
                 }
 
-                Console.WriteLine("CORE: snapshot saved to disk (local backup)");
+                Console.WriteLine(DateTime.Now + " CORE: snapshot saved to disk (local backup)");
                 return StatusCodes.Success;
             }
             else //удалённый снэпшот ядра
@@ -47,12 +47,12 @@ namespace CoreCX.Recovery
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine("==RESTORE CORE SNAPSHOT ERROR==");
+                    Console.WriteLine(DateTime.Now + " ==RESTORE CORE SNAPSHOT ERROR==");
                     Console.WriteLine(e.ToString());
                     return StatusCodes.ErrorSnapshotRestoreFailed;
                 }
 
-                Console.WriteLine("CORE: snapshot retrieved from disk (local restore)");
+                Console.WriteLine(DateTime.Now + " CORE: snapshot retrieved from disk (local restore)");
                 return StatusCodes.Success;
             }
             else //удалённый снэпшот ядра

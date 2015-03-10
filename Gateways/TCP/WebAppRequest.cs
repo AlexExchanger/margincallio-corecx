@@ -26,7 +26,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.CreateAccount(user_id);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
                             };
-                            Console.WriteLine("To queue core.CreateAccount(" + str_args[0] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.CreateAccount(" + str_args[0] + ")");
                             break;
                         }
                         else
@@ -47,7 +47,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.SuspendAccount(user_id);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
                             };
-                            Console.WriteLine("To queue core.SuspendAccount(" + str_args[0] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.SuspendAccount(" + str_args[0] + ")");
                             break;
                         }
                         else
@@ -68,7 +68,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.UnsuspendAccount(user_id);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
                             };
-                            Console.WriteLine("To queue core.UnsuspendAccount(" + str_args[0] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.UnsuspendAccount(" + str_args[0] + ")");
                             break;
                         }
                         else
@@ -89,7 +89,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.DeleteAccount(user_id);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
                             };
-                            Console.WriteLine("To queue core.DeleteAccount(" + str_args[0] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.DeleteAccount(" + str_args[0] + ")");
                             break;
                         }
                         else
@@ -111,7 +111,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.DepositFunds(user_id, str_args[1], amount);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
                             };
-                            Console.WriteLine("To queue core.DepositFunds(" + str_args[0] + ", " + str_args[1] + ", " + str_args[2] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.DepositFunds(" + str_args[0] + ", " + str_args[1] + ", " + str_args[2] + ")");
                             break;
                         }
                         else
@@ -133,7 +133,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.WithdrawFunds(user_id, str_args[1], amount);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
                             };
-                            Console.WriteLine("To queue core.WithdrawFunds(" + str_args[0] + ", " + str_args[1] + ", " + str_args[2] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.WithdrawFunds(" + str_args[0] + ", " + str_args[1] + ", " + str_args[2] + ")");
                             break;
                         }
                         else
@@ -156,7 +156,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.PlaceLimit(user_id, str_args[1], side, amount, rate, sl_rate, tp_rate, ts_offset, call.FuncCallId, FCSources.WebApp);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
                             };
-                            Console.WriteLine("To queue core.PlaceLimit(" + str_args[0] + ", " + str_args[1] + ", " + str_args[2] + ", " + str_args[3] + ", " + str_args[4] + ", " + str_args[5] + ", " + str_args[6] + ", " + str_args[7] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.PlaceLimit(" + str_args[0] + ", " + str_args[1] + ", " + str_args[2] + ", " + str_args[3] + ", " + str_args[4] + ", " + str_args[5] + ", " + str_args[6] + ", " + str_args[7] + ")");
                             break;
                         }
                         else
@@ -179,7 +179,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.PlaceMarket(user_id, str_args[1], side, base_amount, amount, sl_rate, tp_rate, ts_offset, call.FuncCallId, FCSources.WebApp);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
                             };
-                            Console.WriteLine("To queue core.PlaceMarket(" + str_args[0] + ", " + str_args[1] + ", " + str_args[2] + ", " + str_args[3] + ", " + str_args[4] + ", " + str_args[5] + ", " + str_args[6] + ", " + str_args[7] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.PlaceMarket(" + str_args[0] + ", " + str_args[1] + ", " + str_args[2] + ", " + str_args[3] + ", " + str_args[4] + ", " + str_args[5] + ", " + str_args[6] + ", " + str_args[7] + ")");
                             break;
                         }
                         else
@@ -201,7 +201,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.CancelOrder(user_id, order_id, call.FuncCallId, FCSources.WebApp);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
                             };
-                            Console.WriteLine("To queue core.CancelOrder(" + str_args[0] + ", " + str_args[1] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.CancelOrder(" + str_args[0] + ", " + str_args[1] + ")");
                             break;
                         }
                         else
@@ -223,7 +223,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.SetAccountFee(user_id, str_args[1], fee_in_perc, call.FuncCallId);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
                             };
-                            Console.WriteLine("To queue core.SetAccountFee(" + str_args[0] + ", " + str_args[1] + ", " + str_args[2] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.SetAccountFee(" + str_args[0] + ", " + str_args[1] + ", " + str_args[2] + ")");
                             break;
                         }
                         else
@@ -247,7 +247,7 @@ namespace CoreCX.Gateways.TCP
                                     StatusCodes status = App.core.GetAccountBalance(user_id, str_args[1], out funds);
                                     WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, funds);
                                 };
-                                Console.WriteLine("To queue core.GetAccountBalance(" + str_args[0] + ", " + str_args[1] + ")");
+                                Console.WriteLine(DateTime.Now + " To queue core.GetAccountBalance(" + str_args[0] + ", " + str_args[1] + ")");
                             }
                             else //валюта не задана (получаем баланс по всем валютам)
                             {
@@ -257,7 +257,7 @@ namespace CoreCX.Gateways.TCP
                                     StatusCodes status = App.core.GetAccountBalance(user_id, out funds);
                                     WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, funds);
                                 };
-                                Console.WriteLine("To queue core.GetAccountBalance(" + str_args[0] + ")");
+                                Console.WriteLine(DateTime.Now + " To queue core.GetAccountBalance(" + str_args[0] + ")");
                             }                            
                             break;
                         }
@@ -280,7 +280,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.GetAccountParameters(user_id, out acc_pars);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, acc_pars);
                             };
-                            Console.WriteLine("To queue core.GetAccountParameters(" + str_args[0] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.GetAccountParameters(" + str_args[0] + ")");
                             break;
                         }
                         else
@@ -302,7 +302,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.GetAccountFee(user_id, str_args[1], out fee_in_perc);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, fee_in_perc);
                             };
-                            Console.WriteLine("To queue core.GetAccountFee(" + str_args[0] + ", " + str_args[1] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.GetAccountFee(" + str_args[0] + ", " + str_args[1] + ")");
                             break;
                         }
                         else
@@ -325,7 +325,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.GetOpenOrders(user_id, str_args[1], out buy_limit, out sell_limit, out buy_sl, out sell_sl, out buy_tp, out sell_tp, out buy_ts, out sell_ts);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, buy_limit, sell_limit, buy_sl, sell_sl, buy_tp, sell_tp, buy_ts, sell_ts);
                             };
-                            Console.WriteLine("To queue core.GetOpenOrders(" + str_args[0] + ", " + str_args[1] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.GetOpenOrders(" + str_args[0] + ", " + str_args[1] + ")");
                             break;
                         }
                         else
@@ -350,7 +350,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.GetOrderInfo(user_id, order_id, out derived_currency, out side, out order);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, derived_currency, side, order);
                             };
-                            Console.WriteLine("To queue core.GetOrderInfo(" + str_args[0] + ", " + str_args[1] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.GetOrderInfo(" + str_args[0] + ", " + str_args[1] + ")");
                             break;
                         }
                         else
@@ -371,7 +371,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.CreateCurrencyPair(str_args[0]);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
                             };
-                            Console.WriteLine("To queue core.CreateCurrencyPair(" + str_args[0] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.CreateCurrencyPair(" + str_args[0] + ")");
                             break;
                         }
                         else
@@ -390,7 +390,7 @@ namespace CoreCX.Gateways.TCP
                             StatusCodes status = App.core.GetCurrencyPairs(out currency_pairs);
                             WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, currency_pairs);
                         };
-                        Console.WriteLine("To queue core.GetCurrencyPairs()");
+                        Console.WriteLine(DateTime.Now + " To queue core.GetCurrencyPairs()");
                         break;                    
                     }
 
@@ -403,7 +403,7 @@ namespace CoreCX.Gateways.TCP
                             StatusCodes status = App.core.GetDerivedCurrencies(out derived_currencies);
                             WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, derived_currencies);
                         };
-                        Console.WriteLine("To queue core.GetDerivedCurrencies()");
+                        Console.WriteLine(DateTime.Now + " To queue core.GetDerivedCurrencies()");
                         break;
                     }
 
@@ -420,7 +420,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.GetTicker(str_args[0], out bid, out ask);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, bid, ask);
                             };
-                            Console.WriteLine("To queue core.GetTicker(" + str_args[0] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.GetTicker(" + str_args[0] + ")");
                             break;
                         }
                         else
@@ -443,7 +443,7 @@ namespace CoreCX.Gateways.TCP
                                 StatusCodes status = App.core.GetDepth(str_args[0], limit, out bids, out asks, out bids_vol, out asks_vol, out bids_num, out asks_num);
                                 WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status, bids, asks, bids_vol, asks_vol, bids_num, asks_num);
                             };
-                            Console.WriteLine("To queue core.GetDepth(" + str_args[0] + ", " + str_args[1] + ")");
+                            Console.WriteLine(DateTime.Now + " To queue core.GetDepth(" + str_args[0] + ", " + str_args[1] + ")");
                             break;
                         }
                         else
@@ -468,7 +468,7 @@ namespace CoreCX.Gateways.TCP
                             StatusCodes status = Snapshot.BackupCore(true);
                             WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
                         };
-                        Console.WriteLine("To queue Snapshot.BackupCore()");
+                        Console.WriteLine(DateTime.Now + " To queue Snapshot.BackupCore()");
                         break;
                     }
 
@@ -480,7 +480,7 @@ namespace CoreCX.Gateways.TCP
                             StatusCodes status = Snapshot.RestoreCore(true);
                             WebAppResponse.ReportExecRes(client, call.FuncCallId, (int)status);
                         };
-                        Console.WriteLine("To queue Snapshot.RestoreCore()");
+                        Console.WriteLine(DateTime.Now + " To queue Snapshot.RestoreCore()");
                         break;
                     }
 
