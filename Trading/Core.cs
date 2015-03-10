@@ -41,9 +41,6 @@ namespace CoreCX.Trading
 
             this.base_currency = base_currency;
             this.currency_pair_separator = currency_pair_separator;
-
-            MarginManager.QueueManageMarginExecution(); //сделать не static классами 
-            CondOrdManager.QueueManageConditionalOrdersExecution(); //сделать не static классами
         }
 
         #endregion
@@ -393,10 +390,7 @@ namespace CoreCX.Trading
 
                                         Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, ord_canc_data.Side, buy_order); //сообщение о новой отмене заявки
                                         Pusher.NewBalance(user_id, base_currency, acc.BaseCFunds.AvailableFunds, acc.BaseCFunds.BlockedFunds); //сообщение о новом балансе
-
-                                        if (UpdTicker(ord_canc_data.Book)) Pusher.NewTicker(ord_canc_data.DerivedCurrency, ord_canc_data.Book.bid_buf, ord_canc_data.Book.ask_buf); //сообщение о новом тикере
-                                        if (UpdActiveBuyTop(ord_canc_data.Book)) Pusher.NewOrderBookTop(ord_canc_data.DerivedCurrency, false, ord_canc_data.Book.act_buy_buf); //сообщение о новом топе стакана на покупку
-                                        if (UpdActiveSellTop(ord_canc_data.Book)) Pusher.NewOrderBookTop(ord_canc_data.DerivedCurrency, true, ord_canc_data.Book.act_sell_buf); //сообщение о новом топе стакана на продажу
+                                        PushOrderBookUpdates(ord_canc_data.DerivedCurrency, ord_canc_data.Book);
 
                                         return StatusCodes.Success;
                                     }
@@ -452,10 +446,7 @@ namespace CoreCX.Trading
 
                                         Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, ord_canc_data.Side, sell_order); //сообщение о новой отмене заявки
                                         Pusher.NewBalance(user_id, ord_canc_data.DerivedCurrency, derived_funds.AvailableFunds, derived_funds.BlockedFunds); //сообщение о новом балансе
-
-                                        if (UpdTicker(ord_canc_data.Book)) Pusher.NewTicker(ord_canc_data.DerivedCurrency, ord_canc_data.Book.bid_buf, ord_canc_data.Book.ask_buf); //сообщение о новом тикере
-                                        if (UpdActiveBuyTop(ord_canc_data.Book)) Pusher.NewOrderBookTop(ord_canc_data.DerivedCurrency, false, ord_canc_data.Book.act_buy_buf); //сообщение о новом топе стакана на покупку
-                                        if (UpdActiveSellTop(ord_canc_data.Book)) Pusher.NewOrderBookTop(ord_canc_data.DerivedCurrency, true, ord_canc_data.Book.act_sell_buf); //сообщение о новом топе стакана на продажу
+                                        PushOrderBookUpdates(ord_canc_data.DerivedCurrency, ord_canc_data.Book);
 
                                         return StatusCodes.Success;
                                     }
@@ -1119,7 +1110,7 @@ namespace CoreCX.Trading
 
         #region SERVICE CORE FUNCTIONS
 
-        #region ORDER PLACEMENT & MATCHING
+        #region ORDER MANAGEMENT
 
         private StatusCodes BaseLimit(int user_id, string derived_currency, OrderBook book, bool side, decimal amount, decimal rate, decimal sl_rate, decimal tp_rate, decimal ts_offset, OrderEvents order_event, long func_call_id, FCSources fc_source, string external_data) //базовая функция размещения заявки 
         {
@@ -1439,9 +1430,7 @@ namespace CoreCX.Trading
             //проверка коллекций на пустоту
             if (Accounts.Count == 0 || book.ActiveBuyOrders.Count == 0 || book.ActiveSellOrders.Count == 0)
             {
-                if (UpdTicker(book)) Pusher.NewTicker(derived_currency, book.bid_buf, book.ask_buf); //сообщение о новом тикере
-                if (UpdActiveBuyTop(book)) Pusher.NewOrderBookTop(derived_currency, false, book.act_buy_buf); //сообщение о новом топе стакана на покупку
-                if (UpdActiveSellTop(book)) Pusher.NewOrderBookTop(derived_currency, true, book.act_sell_buf); //сообщение о новом топе стакана на продажу
+                PushOrderBookUpdates(derived_currency, book);
                 return;
             }
 
@@ -1630,9 +1619,19 @@ namespace CoreCX.Trading
                 if ((book.ActiveBuyOrders.Count == 0) || (book.ActiveSellOrders.Count == 0)) break;
             }
 
+            PushOrderBookUpdates(derived_currency, book);
+        }
+
+        #endregion
+
+        #region ORDERBOOK UPDATE MANAGEMENT
+
+        private void PushOrderBookUpdates(string derived_currency, OrderBook book)
+        {
             if (UpdTicker(book)) Pusher.NewTicker(derived_currency, book.bid_buf, book.ask_buf); //сообщение о новом тикере
             if (UpdActiveBuyTop(book)) Pusher.NewOrderBookTop(derived_currency, false, book.act_buy_buf); //сообщение о новом топе стакана на покупку
             if (UpdActiveSellTop(book)) Pusher.NewOrderBookTop(derived_currency, true, book.act_sell_buf); //сообщение о новом топе стакана на продажу
+            MarginManager.QueueDelayedExecution();
         }
 
         private bool UpdTicker(OrderBook book)
@@ -1641,19 +1640,27 @@ namespace CoreCX.Trading
             bool _upd = false;
             if (book.ActiveBuyOrders.Count > 0)
             {
-                Order buy_top_ord = book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1];
-                if (book.bid_buf != buy_top_ord.Rate)
+                Order top_buy_order = book.ActiveBuyOrders[book.ActiveBuyOrders.Count - 1];
+                if (book.bid_buf != top_buy_order.Rate)
                 {
-                    book.bid_buf = buy_top_ord.Rate;
+                    //расчёт % изменения рыночной цены на покупку
+                    decimal bid_deviation = Math.Abs(book.bid_buf / top_buy_order.Rate - 1m);
+                    MarginManager.QueueExecution(bid_deviation);
+                    CondOrdManager.QueueExecution(bid_deviation);
+                    book.bid_buf = top_buy_order.Rate;
                     _upd = true;
                 }
             }
             if (book.ActiveSellOrders.Count > 0)
             {
-                Order sell_top_ord = book.ActiveSellOrders[book.ActiveSellOrders.Count - 1];
-                if (book.ask_buf != sell_top_ord.Rate)
+                Order top_sell_ord = book.ActiveSellOrders[book.ActiveSellOrders.Count - 1];
+                if (book.ask_buf != top_sell_ord.Rate)
                 {
-                    book.ask_buf = sell_top_ord.Rate;
+                    //расчёт % изменения рыночной цены на продажу
+                    decimal ask_deviation = Math.Abs(book.ask_buf / top_sell_ord.Rate - 1m);
+                    MarginManager.QueueExecution(ask_deviation);
+                    CondOrdManager.QueueExecution(ask_deviation);
+                    book.ask_buf = top_sell_ord.Rate;
                     _upd = true;
                 }
             }
@@ -1758,6 +1765,7 @@ namespace CoreCX.Trading
         internal void ManageMargin() //расчёт маржинальных параметров, выполнение MC/FL в случае необходимости
         {
             //реплицировать
+            Console.WriteLine(DateTime.Now + " ManageMargin()");
 
             //управление маржинальными параметрами каждого клиента
             foreach (KeyValuePair<int, Account> acc in Accounts)
@@ -1923,6 +1931,10 @@ namespace CoreCX.Trading
 
         internal void ManageConditionalOrders() //проверка и расчёт условных заявок во всех стаканах
         {
+            //реплицировать
+
+            Console.WriteLine(DateTime.Now + " ManageConditionalOrders()");
+
             foreach (KeyValuePair<string, OrderBook> book in OrderBooks)
             {
                 ManageSLs(book.Key, book.Value);
@@ -1933,8 +1945,6 @@ namespace CoreCX.Trading
 
         private void ManageSLs(string derived_currency, OrderBook book)
         {
-            //реплицировать
-
             //проверяем условия SL на продажу
             for (int i = book.SellSLs.Count - 1; i >= 0; i--)
             {
@@ -2082,8 +2092,6 @@ namespace CoreCX.Trading
 
         private void ManageTPs(string derived_currency, OrderBook book)
         {
-            //реплицировать
-
             //проверяем условия TP на продажу
             for (int i = book.SellTPs.Count - 1; i >= 0; i--)
             {
@@ -2230,8 +2238,6 @@ namespace CoreCX.Trading
 
         private void ManageTSs(string derived_currency, OrderBook book)
         {
-            //реплицировать
-
             //проверяем условия TS на продажу
             for (int i = book.SellTSs.Count - 1; i >= 0; i--)
             {

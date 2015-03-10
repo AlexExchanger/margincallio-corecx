@@ -19,8 +19,13 @@ namespace CoreCX
             proc = new Processor();
 
             core.CreateCurrencyPair("btc");
+            Console.WriteLine("CORE: created 'btc_eur' currency pair");
+
             core.CreateCurrencyPair("ltc");
+            Console.WriteLine("CORE: created 'ltc_eur' currency pair");
+
             core.CreateCurrencyPair("doge");
+            Console.WriteLine("CORE: created 'doge_eur' currency pair");
 
             //Console.WriteLine(core.DepositFunds(1, "btc", 99999999m));
             //Console.WriteLine(core.DepositFunds(1, "ltc", 99999999m));

@@ -695,24 +695,19 @@ namespace CoreCX.Gateways.TCP
                 writer.WritePropertyName("7");
                 writer.WriteValue(side.ToInt32());
                 writer.WritePropertyName("8");
-                writer.WriteValue(order.ActualAmount);
+                writer.WriteValue(order.OriginalAmount);
                 writer.WritePropertyName("9");
+                writer.WriteValue(order.ActualAmount);
+                writer.WritePropertyName("10");
                 writer.WriteValue(order.Rate);
+                writer.WritePropertyName("11");
 
                 TSOrder ts_order = order as TSOrder;
-                if (ts_order == null)
-                {
-                    writer.WritePropertyName("10");
-                    writer.WriteValue(order.DtMade.Ticks);
-                }
-                else
-                {
-                    writer.WritePropertyName("10");
-                    writer.WriteValue(ts_order.Offset);
-                    writer.WritePropertyName("11");
-                    writer.WriteValue(ts_order.DtMade.Ticks);
-                }
+                if (ts_order == null) writer.WriteValue(0m);
+                else writer.WriteValue(ts_order.Offset);
 
+                writer.WritePropertyName("12");
+                writer.WriteValue(order.DtMade.Ticks);
                 writer.WriteEndObject();
             }
 

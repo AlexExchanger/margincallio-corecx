@@ -93,7 +93,7 @@ namespace CoreCX
         ErrorStopLossUnavailable = 51,
         ErrorTakeProfitUnavailable = 52,
         ErrorTrailingStopUnavailable = 53,
-        
+        ErrorIncorrectDelayValue = 54,
 
         Unknown = 99
     }

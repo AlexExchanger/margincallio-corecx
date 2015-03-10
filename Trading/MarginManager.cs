@@ -5,38 +5,60 @@ namespace CoreCX.Trading
 {
     static class MarginManager
     {
-        private static volatile bool manage = new bool();
-        private static int mm_interval = 100;
-        private static Timer MM_Timer = new Timer(MM_Tick, null, mm_interval, Timeout.Infinite);
-        private static int guaranteed_manage_interval = 2000;
-        private static DateTime last_dt_managed = new DateTime();
+        private static volatile bool delayed = new bool();
+        private static decimal crit_market_rate_deviation = 0.05m;
+        private static int delay = 1000;
 
-        internal static void QueueManageMarginExecution()
+        internal static void QueueExecution(decimal deviation)
         {
-            manage = true;
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                if (deviation < crit_market_rate_deviation)
+                {
+                    if (!delayed)
+                    {
+                        delayed = true;
+                        Thread.Sleep(delay);
+                        delayed = false;
+                    }
+                    else return;
+                }
+                Queues.prdf_queue.Enqueue(() => { App.core.ManageMargin(); });
+            });
         }
 
-        private static void MM_Tick(object data)
+        internal static void QueueDelayedExecution()
         {
-            //if (Flags.backup_restore_in_proc) return; //проверка на резервирование или восстановление снэпшота
-
-            if (manage) //если ядро требует поставить ManageMargin в очередь, то выполняем
+            ThreadPool.QueueUserWorkItem(delegate
             {
-                //ставим в очередь
-                Queues.prdf_queue.Enqueue(() => { App.core.ManageMargin(); });
+                if (!delayed)
+                {
+                    delayed = true;
+                    Thread.Sleep(delay);
+                    delayed = false;
+                    Queues.prdf_queue.Enqueue(() => { App.core.ManageMargin(); });
+                }                
+            });
+        }
 
-                manage = false;
-                last_dt_managed = DateTime.Now;
-            }
-            else if (last_dt_managed.AddMilliseconds(guaranteed_manage_interval) <= DateTime.Now) //если прошёл заданный интервал, то выполняем
+        internal static StatusCodes SetCriticalMarketRateDeviation(decimal deviation_in_perc)
+        {
+            if (deviation_in_perc >= 0 && deviation_in_perc <= 100) //проверка на корректность процентного значения
             {
-                //ставим в очередь
-                Queues.prdf_queue.Enqueue(() => { App.core.ManageMargin(); });
-
-                last_dt_managed = DateTime.Now;
+                crit_market_rate_deviation = deviation_in_perc / 100m;
+                return StatusCodes.Success;
             }
-            
-            MM_Timer.Change(mm_interval, Timeout.Infinite);
+            else return StatusCodes.ErrorIncorrectPercValue;
+        }
+
+        internal static StatusCodes SetDelay(int new_delay)
+        {
+            if (new_delay >= 1 && new_delay <= 60000) //от 1 миллисекунды до 1 минуты
+            {
+                delay = new_delay;
+                return StatusCodes.Success;
+            }
+            else return StatusCodes.ErrorIncorrectDelayValue;
         }
     }
 }
