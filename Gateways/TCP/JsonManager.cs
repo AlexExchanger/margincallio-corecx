@@ -810,5 +810,35 @@ namespace CoreCX.Gateways.TCP
 
         #endregion
 
+        #region RECOVERY PUSH REPLICAS
+        
+        internal static string FormTechJson(int func_id, string[] str_args)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter sw = new StringWriter(sb);
+
+            using (JsonWriter writer = new JsonTextWriter(sw))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("0");
+                writer.WriteValue(func_id);
+
+                if (str_args != null)
+                {
+                    for (int i = 0; i < str_args.Length; i++)
+                    {
+                        writer.WritePropertyName((i + 1).ToString());
+                        writer.WriteValue(str_args[i]);
+                    }
+                }
+
+                writer.WriteEndObject();
+            }
+
+            return sb.ToString();
+        }
+
+        #endregion
+
     }
 }

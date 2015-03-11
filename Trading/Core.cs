@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using CoreCX.Gateways.TCP;
 
+
 namespace CoreCX.Trading
 {
     [Serializable]
@@ -51,7 +52,7 @@ namespace CoreCX.Trading
 
         internal StatusCodes CreateAccount(int user_id) //открыть торговый счёт
         {
-            //реплицировать
+            Pusher.ReplicateFC(FuncIds.CreateAccount, new string[] { user_id.ToString() }); //репликация вызова функции
             
             if (!Accounts.ContainsKey(user_id)) //если счёт ещё не открыт, то открываем
             {
@@ -70,7 +71,7 @@ namespace CoreCX.Trading
         
         internal StatusCodes SuspendAccount(int user_id) //заблокировать торговый счёт
         {
-            //реплицировать
+            Pusher.ReplicateFC(FuncIds.SuspendAccount, new string[] { user_id.ToString() }); //репликация вызова функции
 
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то блокируем
@@ -87,7 +88,7 @@ namespace CoreCX.Trading
 
         internal StatusCodes UnsuspendAccount(int user_id) //разблокировать торговый счёт
         {
-            //реплицировать
+            Pusher.ReplicateFC(FuncIds.UnsuspendAccount, new string[] { user_id.ToString() }); //репликация вызова функции
 
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то разблокируем
@@ -104,7 +105,7 @@ namespace CoreCX.Trading
 
         internal StatusCodes DeleteAccount(int user_id) //удалить торговый счёт //TODO отменять заявки, возвращать массив средств на выход
         {
-            //реплицировать
+            Pusher.ReplicateFC(FuncIds.DeleteAccount, new string[] { user_id.ToString() }); //репликация вызова функции
 
             if (Accounts.ContainsKey(user_id)) //если счёт существует, то удаляем
             {
@@ -131,7 +132,7 @@ namespace CoreCX.Trading
 
         internal StatusCodes DepositFunds(int user_id, string currency, decimal amount) //пополнить торговый счёт
         {
-            //реплицировать
+            Pusher.ReplicateFC(FuncIds.DepositFunds, new string[] { user_id.ToString(), currency, amount.ToString() }); //репликация вызова функции
 
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то пополняем
@@ -163,7 +164,7 @@ namespace CoreCX.Trading
                
         internal StatusCodes WithdrawFunds(int user_id, string currency, decimal amount) //снять с торгового счёта
         {
-            //реплицировать
+            Pusher.ReplicateFC(FuncIds.WithdrawFunds, new string[] { user_id.ToString(), currency, amount.ToString() }); //репликация вызова функции
 
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то снимаем
@@ -211,7 +212,7 @@ namespace CoreCX.Trading
         
         internal StatusCodes PlaceLimit(int user_id, string derived_currency, bool side, decimal amount, decimal rate, decimal sl_rate, decimal tp_rate, decimal ts_offset, long func_call_id, FCSources fc_source, string external_data = null) //подать лимитную заявку
         {
-            //реплицировать
+            Pusher.ReplicateFC(FuncIds.PlaceLimit, new string[] { user_id.ToString(), derived_currency, side.ToInt32().ToString(), amount.ToString(), rate.ToString(), sl_rate.ToString(), tp_rate.ToString(), ts_offset.ToString() }); //репликация вызова функции
 
             OrderBook book;
             if (OrderBooks.TryGetValue(derived_currency, out book)) //проверка на существование стакана
@@ -223,7 +224,7 @@ namespace CoreCX.Trading
 
         internal StatusCodes PlaceMarket(int user_id, string derived_currency, bool side, bool base_amount, decimal amount, decimal sl_rate, decimal tp_rate, decimal ts_offset, long func_call_id, FCSources fc_source, string external_data = null) //подать рыночную заявку
         {
-            //реплицировать
+            Pusher.ReplicateFC(FuncIds.PlaceMarket, new string[] { user_id.ToString(), derived_currency, side.ToInt32().ToString(), base_amount.ToInt32().ToString(), amount.ToString(), sl_rate.ToString(), tp_rate.ToString(), ts_offset.ToString() }); //репликация вызова функции
 
             OrderBook book;
             if (OrderBooks.TryGetValue(derived_currency, out book)) //проверка на существование стакана
@@ -330,7 +331,7 @@ namespace CoreCX.Trading
 
         internal StatusCodes CancelOrder(int user_id, long order_id, long func_call_id, FCSources fc_source) //отменить активную заявку
         {
-            //реплицировать
+            Pusher.ReplicateFC(FuncIds.CancelOrder, new string[] { user_id.ToString(), order_id.ToString() }); //репликация вызова функции
 
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то отменяем заявку
@@ -589,6 +590,8 @@ namespace CoreCX.Trading
 
         internal StatusCodes SetAccountFee(int user_id, string derived_currency, decimal fee_in_perc, long func_call_id) //установить размер комиссии для торгового счёта
         {
+            Pusher.ReplicateFC(FuncIds.SetAccountFee, new string[] { user_id.ToString(), derived_currency, fee_in_perc.ToString() }); //репликация вызова функции
+            
             Account acc;
             if (Accounts.TryGetValue(user_id, out acc)) //если счёт существует, то получаем комиссию
             {
@@ -960,7 +963,7 @@ namespace CoreCX.Trading
                
         internal StatusCodes CreateCurrencyPair(string derived_currency)
         {
-            //реплицировать
+            Pusher.ReplicateFC(FuncIds.CreateCurrencyPair, new string[] { derived_currency }); //репликация вызова функции
 
             //проверка символа производной валюты на пустоту
             if (!String.IsNullOrEmpty(derived_currency))
@@ -1000,9 +1003,9 @@ namespace CoreCX.Trading
             return StatusCodes.Success;
         }
 
-        internal StatusCodes DeleteCurrencyPair() // TODO IN MARCH
+        internal StatusCodes DeleteCurrencyPair(string derived_currency) // TODO IN MARCH
         {
-            //реплицировать
+            Pusher.ReplicateFC(FuncIds.DeleteCurrencyPair, new string[] { derived_currency }); //репликация вызова функции
 
             return StatusCodes.Success;
         }
@@ -1764,7 +1767,8 @@ namespace CoreCX.Trading
 
         internal void ManageMargin() //расчёт маржинальных параметров, выполнение MC/FL в случае необходимости
         {
-            //реплицировать
+            Pusher.ReplicateFC(FuncIds.ManageMargin, new string[0]); //репликация вызова функции
+
             Console.WriteLine(DateTime.Now + " ManageMargin()");
 
             //управление маржинальными параметрами каждого клиента
@@ -1934,7 +1938,7 @@ namespace CoreCX.Trading
 
         internal void ManageConditionalOrders() //проверка и расчёт условных заявок во всех стаканах
         {
-            //реплицировать
+            Pusher.ReplicateFC(FuncIds.ManageConditionalOrders, new string[0]); //репликация вызова функции
 
             Console.WriteLine(DateTime.Now + " ManageConditionalOrders()");
 

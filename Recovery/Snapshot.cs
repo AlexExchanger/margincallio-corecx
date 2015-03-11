@@ -36,6 +36,9 @@ namespace CoreCX.Recovery
             }
             else //удалённый снэпшот ядра
             {
+
+
+
                 return StatusCodes.Success;
             }
         }
@@ -69,6 +72,7 @@ namespace CoreCX.Recovery
             }
             else //удалённый снэпшот ядра
             {
+                
                 return StatusCodes.Success;
             }
         }

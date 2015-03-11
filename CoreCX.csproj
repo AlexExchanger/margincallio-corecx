@@ -72,6 +72,7 @@
     <Compile Include="Gateways\TCP\WebAppResponse.cs" />
     <Compile Include="Processor.cs" />
     <Compile Include="Queues.cs" />
+    <Compile Include="Recovery\FuncCallReplica.cs" />
     <Compile Include="Recovery\Snapshot.cs" />
     <Compile Include="Trading\Account.cs" />
     <Compile Include="App.cs" />

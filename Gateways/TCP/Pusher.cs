@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CoreCX.Recovery;
 using CoreCX.Trading;
 using CoreCX.Gateways.TCP.Messages;
 
@@ -10,6 +11,8 @@ namespace CoreCX.Gateways.TCP
 {
     static class Pusher
     {
+        #region DAEMON QUEUE BLOCKING PUSHES
+
         internal static void NewBalance(int user_id, string currency, decimal available_funds, decimal blocked_funds) //new balance => DAEMON
         {
             Queues.daemon_queue.Enqueue(new BalanceMsg(user_id, currency, available_funds, blocked_funds));
@@ -54,6 +57,17 @@ namespace CoreCX.Gateways.TCP
         {
             Queues.daemon_queue.Enqueue(new AccountFeeMsg(func_call_id, user_id, derived_currency, fee_in_perc));
         }
+
+        #endregion
+
+        #region RECOVERY QUEUE BLOCKING PUSHES
+
+        internal static void ReplicateFC(FuncIds func_id, string[] str_args) //function call replica => RESERVE CORE
+        {
+            Queues.recovery_queue.Enqueue(new FuncCallReplica((int)func_id, str_args));
+        }
+
+        #endregion
 
     }
 }

@@ -29,7 +29,10 @@ namespace CoreCX
         GetDepth = 7100,
 
         BackupCore = 9000,
-        RestoreCore = 9100
+        RestoreCore = 9100,
+
+        ManageMargin = 60000, //replication-only
+        ManageConditionalOrders = 61000 //replication-only
     }
 
     internal enum MarketClosedForbiddenFuncIds

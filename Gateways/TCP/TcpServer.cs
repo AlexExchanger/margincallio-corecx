@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Net;
 using System.Threading;
 using CoreCX.Gateways.TCP.Messages;
+using CoreCX.Recovery;
 
 namespace CoreCX.Gateways.TCP
 {
@@ -10,38 +11,46 @@ namespace CoreCX.Gateways.TCP
     {        
         //прослушиваемые порты (константы с момента старта инстанса ядра)
         private int WebAppPort;
-        private int HttpApiPort;
+        private int RecoveryPort;
         private int DaemonPort;
+        private int HttpApiPort;
 
         //адреса для IP-рестрикта TODO функция управления рестриктом)
         private string WebAppIP;
-        private string HttpApiIP;
+        private string RecoveryIP;
         private string DaemonIP;
+        private string HttpApiIP;
 
-        internal TcpServer(int web_app_port, int http_api_port, int daemon_port)
+        internal TcpServer(int web_app_port, int recovery_port, int daemon_port, int http_api_port)
         {
             //инициализация прослушиваемых портов
             WebAppPort = web_app_port;
-            HttpApiPort = http_api_port;
+            RecoveryPort = recovery_port;
             DaemonPort = daemon_port;
+            HttpApiPort = http_api_port;
 
             //инициализация IP-рестрикта
             WebAppIP = "199.0.0.1"; //TODO IP-рестрикт
-            HttpApiIP = "127.0.0.1";
+            RecoveryIP = "199.0.0.1"; //TODO IP-рестрикт
             DaemonIP = "199.0.0.1"; //TODO IP-рестрикт
+            HttpApiIP = "127.0.0.1";
 
             //создание и пуск потоков акцепторов
             Thread web_app_thread = new Thread(new ThreadStart(ListenWebAppThread));
             web_app_thread.Start();
             Console.WriteLine(DateTime.Now + " WEB APP: listening thread started");
 
-            //Thread http_api_thread = new Thread(new ThreadStart(ListenHttpApiThread));
-            //http_api_thread.Start();
-            //Console.WriteLine(DateTime.Now + " HTTP API: listening thread started");
+            Thread recovery_thread = new Thread(new ThreadStart(ListenHandleRecoveryThread));
+            recovery_thread.Start();
+            Console.WriteLine(DateTime.Now + " RECOVERY: listening/handling thread started");
 
             Thread daemon_thread = new Thread(new ThreadStart(ListenHandleDaemonThread));
             daemon_thread.Start();
             Console.WriteLine(DateTime.Now + " DAEMON: listening/handling thread started");
+
+            //Thread http_api_thread = new Thread(new ThreadStart(ListenHttpApiThread));
+            //http_api_thread.Start();
+            //Console.WriteLine(DateTime.Now + " HTTP API: listening thread started");
         }
 
         #region WEB APP LISTENING LOGIC
@@ -130,6 +139,78 @@ namespace CoreCX.Gateways.TCP
 
         #endregion
 
+        #region RECOVERY LISTENING LOGIC
+
+        private void ListenHandleRecoveryThread() //TODO add IP restriction
+        {
+            //запуск TCP-акцептора
+            try
+            {
+                TcpListener listener = new TcpListener(IPAddress.Any, RecoveryPort);
+                listener.Start();
+
+                while (true)
+                {
+                    Console.WriteLine(DateTime.Now + " RECOVERY: waiting for connections");
+
+                    //ожидаем подключения сервисных клиентов
+                    TcpClient client = listener.AcceptTcpClient();
+
+                    //проверка по IP клиента: RECOVERY
+                    string remote_ip = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString(); //получаем IP подключившегося клиента
+
+                    Console.WriteLine(DateTime.Now + " RECOVERY: connection request from " + remote_ip);
+
+                    //  <<<< MOVE INSIDE THE COMMENTED SNIPPET BELOW (TO ADD IP RECTRICTION)
+                    Console.WriteLine(DateTime.Now + " RECOVERY: client connected [test mode]");
+                    while (true)
+                    {
+                        //попытка преобразовать сообщение в JSON и отправить его демону
+                        FuncCallReplica fc_replica;
+                        if (Queues.recovery_queue.TryPeek(out fc_replica))
+                        {
+                            bool _sent = SocketIO.Write(client, fc_replica.Serialize());
+
+                            if (_sent)
+                            {
+                                Console.WriteLine(DateTime.Now + " RECOVERY: replica sent");
+                                Queues.recovery_queue.TryDequeue(out fc_replica);
+                            }
+                            else
+                            {
+                                Console.WriteLine(DateTime.Now + " RECOVERY: failed to send a replica (dc)");
+                                break;
+                            }
+                        }
+                    }
+
+                    client.Close();
+                    Console.WriteLine(DateTime.Now + " RECOVERY: connection closed");
+
+                    //if (remote_ip == RecoveryIP) //RECOVERY
+                    //{
+                    //    Console.WriteLine(DateTime.Now + " RECOVERY: client connected");
+                    //
+                    //    //логика выгребания из очереди в сокет
+                    //    //MOVE LOGIC HERE
+                    //
+                    //}
+                    //else //неизвестный клиент
+                    //{
+                    //    client.Close();
+                    //    Console.WriteLine(DateTime.Now + " RECOVERY: client rejected by IP restriction");
+                    //}
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(DateTime.Now + " ==TCP ERROR==");
+                Console.WriteLine(e.ToString());
+            }
+        }
+
+        #endregion
+
         #region DAEMON LISTENING LOGIC
 
         private void ListenHandleDaemonThread() //TODO add IP restriction
@@ -182,7 +263,7 @@ namespace CoreCX.Gateways.TCP
                     //{
                     //    Console.WriteLine(DateTime.Now + " DAEMON: client connected");
                     //
-                    //    //логика выгребания из очереди в сокет Slave-ядра
+                    //    //логика выгребания из очереди в сокет
                     //    //MOVE LOGIC HERE
                     //
                     //}
