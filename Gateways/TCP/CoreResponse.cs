@@ -6,7 +6,7 @@ using CoreCX.Trading;
 
 namespace CoreCX.Gateways.TCP
 {
-    static class WebAppResponse
+    static class CoreResponse
     {
         internal static void ReportExecRes(TcpClient client, long func_call_id, int status_code)
         {

@@ -30,6 +30,7 @@ namespace CoreCX
 
         BackupCore = 9000,
         RestoreCore = 9100,
+        ResetFuncCallId = 9500,        
 
         ManageMargin = 60000, //replication-only
         ManageConditionalOrders = 61000 //replication-only
@@ -118,8 +119,10 @@ namespace CoreCX
     {
         Core = 0,
         WebApp = 1,
-        HttpApi = 2,
-        FixApi = 3
+        Marketmaker = 2,
+        HttpApi = 3,
+        FixApi = 4,
+
     }
 
     internal enum CancOrdTypes

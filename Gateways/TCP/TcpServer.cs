@@ -11,42 +11,46 @@ namespace CoreCX.Gateways.TCP
     {        
         //прослушиваемые порты (константы с момента старта инстанса ядра)
         private int WebAppPort;
-        private int RecoveryPort;
+        private int MarketmakerPort;
         private int DaemonPort;
-        private int HttpApiPort;
+        private int ReservePort;
 
         //адреса для IP-рестрикта TODO функция управления рестриктом)
         private string WebAppIP;
-        private string RecoveryIP;
+        private string MarketmakerIP;
         private string DaemonIP;
-        private string HttpApiIP;
+        private string ReserveIP;
 
-        internal TcpServer(int web_app_port, int recovery_port, int daemon_port, int http_api_port)
+        internal TcpServer(int web_app_port, int marketmaker_port, int daemon_port, int reserve_port)
         {
             //инициализация прослушиваемых портов
             WebAppPort = web_app_port;
-            RecoveryPort = recovery_port;
+            MarketmakerPort = marketmaker_port;
             DaemonPort = daemon_port;
-            HttpApiPort = http_api_port;
+            ReservePort = reserve_port;
 
             //инициализация IP-рестрикта
             WebAppIP = "199.0.0.1"; //TODO IP-рестрикт
-            RecoveryIP = "199.0.0.1"; //TODO IP-рестрикт
+            MarketmakerIP = "199.0.0.1"; //TODO IP-рестрикт
             DaemonIP = "199.0.0.1"; //TODO IP-рестрикт
-            HttpApiIP = "127.0.0.1";
+            ReserveIP = "127.0.0.1";
 
             //создание и пуск потоков акцепторов
             Thread web_app_thread = new Thread(new ThreadStart(ListenWebAppThread));
             web_app_thread.Start();
             Console.WriteLine(DateTime.Now + " WEB APP: listening thread started");
 
-            Thread recovery_thread = new Thread(new ThreadStart(ListenHandleRecoveryThread));
-            recovery_thread.Start();
-            Console.WriteLine(DateTime.Now + " RECOVERY: listening/handling thread started");
+            Thread marketmaker_thread = new Thread(new ThreadStart(ListenMarketmakerThread));
+            marketmaker_thread.Start();
+            Console.WriteLine(DateTime.Now + " MARKETMAKER: listening thread started");
 
             Thread daemon_thread = new Thread(new ThreadStart(ListenHandleDaemonThread));
             daemon_thread.Start();
             Console.WriteLine(DateTime.Now + " DAEMON: listening/handling thread started");
+
+            Thread reserve_thread = new Thread(new ThreadStart(ListenHandleReserveThread));
+            reserve_thread.Start();
+            Console.WriteLine(DateTime.Now + " RESERVE: listening/handling thread started");
 
             //Thread http_api_thread = new Thread(new ThreadStart(ListenHttpApiThread));
             //http_api_thread.Start();
@@ -128,7 +132,7 @@ namespace CoreCX.Gateways.TCP
                     }
                     else //ошибка JSON-парсинга
                     {
-                        WebAppResponse.RejectInvalidJson(client);                        
+                        CoreResponse.RejectInvalidJson(client);                        
                     }
                 }
             }
@@ -139,66 +143,44 @@ namespace CoreCX.Gateways.TCP
 
         #endregion
 
-        #region RECOVERY LISTENING LOGIC
+        #region MARKETMAKER LISTENING LOGIC
 
-        private void ListenHandleRecoveryThread() //TODO add IP restriction
+        private void ListenMarketmakerThread() //TODO add IP restriction
         {
             //запуск TCP-акцептора
             try
             {
-                TcpListener listener = new TcpListener(IPAddress.Any, RecoveryPort);
+                TcpListener listener = new TcpListener(IPAddress.Any, MarketmakerPort);
                 listener.Start();
 
                 while (true)
                 {
-                    Console.WriteLine(DateTime.Now + " RECOVERY: waiting for connections");
+                    Console.WriteLine(DateTime.Now + " MARKETMAKER: waiting for connections");
 
                     //ожидаем подключения сервисных клиентов
                     TcpClient client = listener.AcceptTcpClient();
 
-                    //проверка по IP клиента: RECOVERY
+                    //проверка по IP клиента
                     string remote_ip = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString(); //получаем IP подключившегося клиента
 
-                    Console.WriteLine(DateTime.Now + " RECOVERY: connection request from " + remote_ip);
+                    Console.WriteLine(DateTime.Now + " MARKETMAKER: connection request from " + remote_ip);
 
-                    //  <<<< MOVE INSIDE THE COMMENTED SNIPPET BELOW (TO ADD IP RECTRICTION)
-                    Console.WriteLine(DateTime.Now + " RECOVERY: client connected [test mode]");
-                    while (true)
-                    {
-                        //попытка преобразовать сообщение в JSON и отправить его демону
-                        FuncCallReplica fc_replica;
-                        if (Queues.recovery_queue.TryPeek(out fc_replica))
-                        {
-                            bool _sent = SocketIO.Write(client, fc_replica.Serialize());
+                    //  <<<< DELETE
+                    Console.WriteLine(DateTime.Now + " MARKETMAKER: client connected [test mode]"); //  <<<< DELETE
+                    Thread mm_thread = new Thread(new ParameterizedThreadStart(HandleMarketmakerThread)); //  <<<< DELETE   
+                    mm_thread.Start(); //  <<<< DELETE 
 
-                            if (_sent)
-                            {
-                                Console.WriteLine(DateTime.Now + " RECOVERY: replica sent");
-                                Queues.recovery_queue.TryDequeue(out fc_replica);
-                            }
-                            else
-                            {
-                                Console.WriteLine(DateTime.Now + " RECOVERY: failed to send a replica (dc)");
-                                break;
-                            }
-                        }
-                    }
-
-                    client.Close();
-                    Console.WriteLine(DateTime.Now + " RECOVERY: connection closed");
-
-                    //if (remote_ip == RecoveryIP) //RECOVERY
+                    //  <<<< UNCOMMENT 
+                    //if (remote_ip == MarketmakerIP) //MARKETMAKER
                     //{
-                    //    Console.WriteLine(DateTime.Now + " RECOVERY: client connected");
-                    //
-                    //    //логика выгребания из очереди в сокет
-                    //    //MOVE LOGIC HERE
-                    //
+                    //    Console.WriteLine(DateTime.Now + " MARKETMAKER: client connected");
+                    //    Thread mm_thread = new Thread(new ParameterizedThreadStart(HandleMarketmakerThread)); //  <<<< DELETE   
+                    //    mm_thread.Start();
                     //}
                     //else //неизвестный клиент
                     //{
                     //    client.Close();
-                    //    Console.WriteLine(DateTime.Now + " RECOVERY: client rejected by IP restriction");
+                    //    Console.WriteLine(DateTime.Now + " MARKETMAKER: client rejected by IP restriction");
                     //}
                 }
             }
@@ -207,6 +189,44 @@ namespace CoreCX.Gateways.TCP
                 Console.WriteLine(DateTime.Now + " ==TCP ERROR==");
                 Console.WriteLine(e.ToString());
             }
+        }
+
+        private void HandleMarketmakerThread(object obj)
+        {
+            TcpClient client = obj as TcpClient;
+
+            while (true)
+            {
+                //получаем команду, парсим и ставим в очередь
+                string received = SocketIO.Read(client);
+
+                Console.WriteLine(DateTime.Now + " MARKETMAKER: received " + received);
+
+                if (received == "dc") break;
+
+                string[] json_fcs = received.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+                for (int i = 0; i < json_fcs.Length; i++)
+                {
+                    //JSON-парсинг вызова функции ядра
+                    int func_id;
+                    string[] str_args;
+                    bool _parsed = JsonManager.ParseTechJson(json_fcs[i], out func_id, out str_args);
+
+                    if (_parsed)
+                    {
+                        Console.WriteLine(DateTime.Now + " MARKETMAKER: to queue function #" + func_id);
+                        MarketmakerRequest.QueueFC(client, func_id, str_args); //попытка парсинга аргументов и постановки в очередь соответствующей функции
+                    }
+                    else //ошибка JSON-парсинга
+                    {
+                        CoreResponse.RejectInvalidJson(client);
+                    }
+                }
+            }
+
+            client.Close();
+            Console.WriteLine(DateTime.Now + " MARKETMAKER: connection closed");
         }
 
         #endregion
@@ -223,7 +243,7 @@ namespace CoreCX.Gateways.TCP
 
                 while (true)
                 {
-                    Console.WriteLine(DateTime.Now + " DAEMON: waiting for connections");
+                    Console.WriteLine(DateTime.Now + " DAEMON: waiting for a connection");
 
                     //ожидаем подключения сервисных клиентов
                     TcpClient client = listener.AcceptTcpClient();
@@ -281,6 +301,78 @@ namespace CoreCX.Gateways.TCP
             }
         }
         
+        #endregion
+        
+        #region RESERVE LISTENING LOGIC
+
+        private void ListenHandleReserveThread() //TODO add IP restriction
+        {
+            //запуск TCP-акцептора
+            try
+            {
+                TcpListener listener = new TcpListener(IPAddress.Any, ReservePort);
+                listener.Start();
+
+                while (true)
+                {
+                    Console.WriteLine(DateTime.Now + " RESERVE: waiting for a connection");
+
+                    //ожидаем подключения сервисных клиентов
+                    TcpClient client = listener.AcceptTcpClient();
+
+                    //проверка по IP клиента: RESERVE
+                    string remote_ip = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString(); //получаем IP подключившегося клиента
+
+                    Console.WriteLine(DateTime.Now + " RESERVE: connection request from " + remote_ip);
+
+                    //  <<<< MOVE INSIDE THE COMMENTED SNIPPET BELOW (TO ADD IP RECTRICTION)
+                    Console.WriteLine(DateTime.Now + " RESERVE: client connected [test mode]");
+                    while (true)
+                    {
+                        //попытка преобразовать сообщение в JSON и отправить его демону
+                        FuncCallReplica fc_replica;
+                        if (Queues.recovery_queue.TryPeek(out fc_replica))
+                        {
+                            bool _sent = SocketIO.Write(client, fc_replica.Serialize());
+
+                            if (_sent)
+                            {
+                                Console.WriteLine(DateTime.Now + " RESERVE: replica sent");
+                                Queues.recovery_queue.TryDequeue(out fc_replica);
+                            }
+                            else
+                            {
+                                Console.WriteLine(DateTime.Now + " RESERVE: failed to send a replica (dc)");
+                                break;
+                            }
+                        }
+                    }
+
+                    client.Close();
+                    Console.WriteLine(DateTime.Now + " RESERVE: connection closed");
+
+                    //if (remote_ip == ReserveIP) //RESERVE
+                    //{
+                    //    Console.WriteLine(DateTime.Now + " RESERVE: client connected");
+                    //
+                    //    //логика выгребания из очереди в сокет
+                    //    //MOVE LOGIC HERE
+                    //
+                    //}
+                    //else //неизвестный клиент
+                    //{
+                    //    client.Close();
+                    //    Console.WriteLine(DateTime.Now + " RESERVE: client rejected by IP restriction");
+                    //}
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(DateTime.Now + " ==TCP ERROR==");
+                Console.WriteLine(e.ToString());
+            }
+        }
+
         #endregion
 
     }

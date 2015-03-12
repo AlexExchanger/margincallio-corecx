@@ -13,12 +13,15 @@ namespace CoreCX.Recovery
             {
                 try
                 {
+                    //backup ID
                     using (StreamWriter sw = new StreamWriter(new FileStream(@"recovery\ids.dat", FileMode.Create, FileAccess.Write, FileShare.None)))
                     {
+                        sw.WriteLine(FuncCall.next_id);
                         sw.WriteLine(Order.next_id);
                         sw.WriteLine(Trade.next_id);
                     }
 
+                    //backup Core
                     BinaryFormatter formatter = new BinaryFormatter();
                     FileStream fs = new FileStream(@"recovery\core.bin", FileMode.Create, FileAccess.Write, FileShare.None);
                     formatter.Serialize(fs, App.core);
@@ -36,9 +39,7 @@ namespace CoreCX.Recovery
             }
             else //удалённый снэпшот ядра
             {
-
-
-
+                                
                 return StatusCodes.Success;
             }
         }
@@ -49,12 +50,15 @@ namespace CoreCX.Recovery
             {
                 try
                 {
+                    //restore ID
                     using (StreamReader sr = new StreamReader(new FileStream(@"recovery\ids.dat", FileMode.Open, FileAccess.Read, FileShare.Read)))
                     {
+                        FuncCall.next_id = long.Parse(sr.ReadLine());
                         Order.next_id = long.Parse(sr.ReadLine());
                         Trade.next_id = long.Parse(sr.ReadLine());
                     }
 
+                    //restore Core
                     BinaryFormatter formatter = new BinaryFormatter();
                     FileStream fs = new FileStream(@"recovery\core.bin", FileMode.Open, FileAccess.Read, FileShare.Read);
                     App.core = (Core)formatter.Deserialize(fs);
