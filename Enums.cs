@@ -133,7 +133,8 @@ namespace CoreCX
     internal enum OrderStatuses
     {
         PartiallyFilled = 0,
-        Filled = 1
+        Filled = 1,
+        Accepted = 2
     }
 
     internal enum OrderEvents

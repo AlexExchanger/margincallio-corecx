@@ -355,29 +355,29 @@ namespace CoreCX.Trading
                                         {
                                             if (buy_order.StopLoss != null)
                                             {
-                                                int sell_index = ord_canc_data.Book.SellSLs.IndexOf(buy_order.StopLoss);
-                                                if (sell_index >= 0)
+                                                if (ord_canc_data.Book.SellSLs.Remove(buy_order.StopLoss)) //удаляем слинкованный SL из памяти
                                                 {
-                                                    ord_canc_data.Book.RemoveSellSL(sell_index);
-                                                    CancelOrderDict.Remove(buy_order.StopLoss.OrderId); //удаляем заявку из словаря на закрытие
+                                                    CancelOrderDict.Remove(buy_order.StopLoss.OrderId);
+                                                    Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, !ord_canc_data.Side, new Order(buy_order.StopLoss)); //сообщение о новой отмене заявке
+                                                    buy_order.StopLoss = null;
                                                 }
                                             }
                                             if (buy_order.TakeProfit != null)
                                             {
-                                                int sell_index = ord_canc_data.Book.SellTPs.IndexOf(buy_order.TakeProfit);
-                                                if (sell_index >= 0)
+                                                if (ord_canc_data.Book.SellTPs.Remove(buy_order.TakeProfit)) //удаляем слинкованный TP из памяти
                                                 {
-                                                    ord_canc_data.Book.RemoveSellTP(sell_index);
-                                                    CancelOrderDict.Remove(buy_order.TakeProfit.OrderId); //удаляем заявку из словаря на закрытие
+                                                    CancelOrderDict.Remove(buy_order.TakeProfit.OrderId);
+                                                    Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, !ord_canc_data.Side, new Order(buy_order.TakeProfit)); //сообщение о новой отмене заявке
+                                                    buy_order.TakeProfit = null;
                                                 }
                                             }
                                             if (buy_order.TrailingStop != null)
                                             {
-                                                int sell_index = ord_canc_data.Book.SellTSs.IndexOf(buy_order.TrailingStop);
-                                                if (sell_index >= 0)
+                                                if (ord_canc_data.Book.SellTSs.Remove(buy_order.TrailingStop)) //удаляем слинкованный TS из памяти
                                                 {
-                                                    ord_canc_data.Book.RemoveSellTS(sell_index);
-                                                    CancelOrderDict.Remove(buy_order.TrailingStop.OrderId); //удаляем заявку из словаря на закрытие
+                                                    CancelOrderDict.Remove(buy_order.TrailingStop.OrderId);
+                                                    Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, !ord_canc_data.Side, new Order(buy_order.TrailingStop)); //сообщение о новой отмене заявке
+                                                    buy_order.TrailingStop = null;
                                                 }
                                             }
                                         }
@@ -411,29 +411,29 @@ namespace CoreCX.Trading
                                         {
                                             if (sell_order.StopLoss != null)
                                             {
-                                                int buy_index = ord_canc_data.Book.BuySLs.IndexOf(sell_order.StopLoss);
-                                                if (buy_index >= 0)
+                                                if (ord_canc_data.Book.BuySLs.Remove(sell_order.StopLoss)) //удаляем слинкованный SL из памяти
                                                 {
-                                                    ord_canc_data.Book.RemoveBuySL(buy_index);
-                                                    CancelOrderDict.Remove(sell_order.StopLoss.OrderId); //удаляем заявку из словаря на закрытие
+                                                    CancelOrderDict.Remove(sell_order.StopLoss.OrderId);
+                                                    Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, !ord_canc_data.Side, new Order(sell_order.StopLoss)); //сообщение о новой отмене заявке
+                                                    sell_order.StopLoss = null;
                                                 }
                                             }
                                             if (sell_order.TakeProfit != null)
                                             {
-                                                int buy_index = ord_canc_data.Book.BuyTPs.IndexOf(sell_order.TakeProfit);
-                                                if (buy_index >= 0)
+                                                if (ord_canc_data.Book.BuyTPs.Remove(sell_order.TakeProfit)) //удаляем слинкованный TP из памяти
                                                 {
-                                                    ord_canc_data.Book.RemoveBuyTP(buy_index);
-                                                    CancelOrderDict.Remove(sell_order.TakeProfit.OrderId); //удаляем заявку из словаря на закрытие
+                                                    CancelOrderDict.Remove(sell_order.TakeProfit.OrderId);
+                                                    Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, !ord_canc_data.Side, new Order(sell_order.TakeProfit)); //сообщение о новой отмене заявке
+                                                    sell_order.TakeProfit = null;
                                                 }
                                             }
                                             if (sell_order.TrailingStop != null)
                                             {
-                                                int buy_index = ord_canc_data.Book.BuyTSs.IndexOf(sell_order.TrailingStop);
-                                                if (buy_index >= 0)
+                                                if (ord_canc_data.Book.BuyTSs.Remove(sell_order.TrailingStop)) //удаляем слинкованный TS из памяти
                                                 {
-                                                    ord_canc_data.Book.RemoveBuyTS(buy_index);
-                                                    CancelOrderDict.Remove(sell_order.TrailingStop.OrderId); //удаляем заявку из словаря на закрытие
+                                                    CancelOrderDict.Remove(sell_order.TrailingStop.OrderId);
+                                                    Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, !ord_canc_data.Side, new Order(sell_order.TrailingStop)); //сообщение о новой отмене заявке
+                                                    sell_order.TrailingStop = null;
                                                 }
                                             }
                                         }
@@ -468,7 +468,6 @@ namespace CoreCX.Trading
                                     {
                                         ord_canc_data.Book.RemoveBuySL(buy_index);                                        
                                         CancelOrderDict.Remove(order_id); //удаляем заявку из словаря на закрытие
-
                                         Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, ord_canc_data.Side, buy_order); //сообщение о новой отмене заявки
 
                                         return StatusCodes.Success;
@@ -487,7 +486,6 @@ namespace CoreCX.Trading
                                     {
                                         ord_canc_data.Book.RemoveSellSL(sell_index);
                                         CancelOrderDict.Remove(order_id); //удаляем заявку из словаря на закрытие
-
                                         Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, ord_canc_data.Side, sell_order); //сообщение о новой отмене заявки
 
                                         return StatusCodes.Success;
@@ -509,7 +507,6 @@ namespace CoreCX.Trading
                                     {
                                         ord_canc_data.Book.RemoveBuyTP(buy_index);
                                         CancelOrderDict.Remove(order_id); //удаляем заявку из словаря на закрытие
-
                                         Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, ord_canc_data.Side, buy_order); //сообщение о новой отмене заявки
 
                                         return StatusCodes.Success;
@@ -528,7 +525,6 @@ namespace CoreCX.Trading
                                     {
                                         ord_canc_data.Book.RemoveSellTP(sell_index);
                                         CancelOrderDict.Remove(order_id); //удаляем заявку из словаря на закрытие
-
                                         Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, ord_canc_data.Side, sell_order); //сообщение о новой отмене заявки
 
                                         return StatusCodes.Success;
@@ -550,7 +546,6 @@ namespace CoreCX.Trading
                                     {
                                         ord_canc_data.Book.RemoveBuyTS(buy_index);
                                         CancelOrderDict.Remove(order_id); //удаляем заявку из словаря на закрытие
-
                                         Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, ord_canc_data.Side, buy_order); //сообщение о новой отмене заявки
 
                                         return StatusCodes.Success;
@@ -569,7 +564,6 @@ namespace CoreCX.Trading
                                     {
                                         ord_canc_data.Book.RemoveSellTS(sell_index);
                                         CancelOrderDict.Remove(order_id); //удаляем заявку из словаря на закрытие
-
                                         Pusher.NewOrder(OrderEvents.Cancel, fc_source, func_call_id, ord_canc_data.DerivedCurrency, ord_canc_data.Side, sell_order); //сообщение о новой отмене заявки
 
                                         return StatusCodes.Success;
@@ -1485,18 +1479,42 @@ namespace CoreCX.Trading
                     Pusher.NewBalance(buy_ord.UserId, derived_currency, buyer_derived_funds.AvailableFunds, buyer_derived_funds.BlockedFunds); //сообщение о новом балансе
 
                     //увеличивается ActualAmount привязанных к buy-заявке SL/TP/TS заявок
-                    if (buy_ord.StopLoss != null) buy_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
-                    if (buy_ord.TakeProfit != null) buy_ord.TakeProfit.ActualAmount += sell_ord.ActualAmount;
-                    if (buy_ord.TrailingStop != null) buy_ord.TrailingStop.ActualAmount += sell_ord.ActualAmount;
+                    if (buy_ord.StopLoss != null)
+                    {
+                        buy_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, buy_ord.StopLoss.OrderId, buy_ord.StopLoss.UserId, buy_ord.StopLoss.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
+                    if (buy_ord.TakeProfit != null)
+                    {
+                        buy_ord.TakeProfit.ActualAmount += sell_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, buy_ord.TakeProfit.OrderId, buy_ord.TakeProfit.UserId, buy_ord.TakeProfit.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
+                    if (buy_ord.TrailingStop != null)
+                    {
+                        buy_ord.TrailingStop.ActualAmount += sell_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, buy_ord.TrailingStop.OrderId, buy_ord.TrailingStop.UserId, buy_ord.TrailingStop.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
 
                     //buy-заявка становится partially filled => уменьшается её ActualAmount
                     buy_ord.ActualAmount -= sell_ord.ActualAmount;
                     Pusher.NewOrderMatch(derived_currency, buy_ord.OrderId, buy_ord.UserId, buy_ord.ActualAmount, OrderStatuses.PartiallyFilled); //сообщение о новом статусе заявки
                     
                     //увеличивается ActualAmount привязанных к sell-заявке SL/TP/TS заявок
-                    if (sell_ord.StopLoss != null) sell_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
-                    if (sell_ord.TakeProfit != null) sell_ord.TakeProfit.ActualAmount += sell_ord.ActualAmount;
-                    if (sell_ord.TrailingStop != null) sell_ord.TrailingStop.ActualAmount += sell_ord.ActualAmount;
+                    if (sell_ord.StopLoss != null)
+                    {
+                        sell_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, sell_ord.StopLoss.OrderId, sell_ord.StopLoss.UserId, sell_ord.StopLoss.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
+                    if (sell_ord.TakeProfit != null)
+                    {
+                        sell_ord.TakeProfit.ActualAmount += sell_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, sell_ord.TakeProfit.OrderId, sell_ord.TakeProfit.UserId, sell_ord.TakeProfit.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
+                    if (sell_ord.TrailingStop != null)
+                    {
+                        sell_ord.TrailingStop.ActualAmount += sell_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, sell_ord.TrailingStop.OrderId, sell_ord.TrailingStop.UserId, sell_ord.TrailingStop.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
 
                     //sell-заявка становится filled => её ActualAmount становится нулевым
                     sell_ord.ActualAmount = 0m;
@@ -1535,18 +1553,42 @@ namespace CoreCX.Trading
                     Pusher.NewBalance(buy_ord.UserId, derived_currency, buyer_derived_funds.AvailableFunds, buyer_derived_funds.BlockedFunds); //сообщение о новом балансе
 
                     //увеличивается ActualAmount привязанных к sell-заявке SL/TP/TS заявок
-                    if (sell_ord.StopLoss != null) sell_ord.StopLoss.ActualAmount += buy_ord.ActualAmount;
-                    if (sell_ord.TakeProfit != null) sell_ord.TakeProfit.ActualAmount += buy_ord.ActualAmount;
-                    if (sell_ord.TrailingStop != null) sell_ord.TrailingStop.ActualAmount += buy_ord.ActualAmount;
+                    if (sell_ord.StopLoss != null)
+                    {
+                        sell_ord.StopLoss.ActualAmount += buy_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, sell_ord.StopLoss.OrderId, sell_ord.StopLoss.UserId, sell_ord.StopLoss.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
+                    if (sell_ord.TakeProfit != null)
+                    {
+                        sell_ord.TakeProfit.ActualAmount += buy_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, sell_ord.TakeProfit.OrderId, sell_ord.TakeProfit.UserId, sell_ord.TakeProfit.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
+                    if (sell_ord.TrailingStop != null)
+                    {
+                        sell_ord.TrailingStop.ActualAmount += buy_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, sell_ord.TrailingStop.OrderId, sell_ord.TrailingStop.UserId, sell_ord.TrailingStop.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
 
                     //sell-заявка становится partially filled => уменьшается её ActualAmount
                     sell_ord.ActualAmount -= buy_ord.ActualAmount;
                     Pusher.NewOrderMatch(derived_currency, sell_ord.OrderId, sell_ord.UserId, sell_ord.ActualAmount, OrderStatuses.PartiallyFilled); //сообщение о новом статусе заявки
 
                     //увеличивается ActualAmount привязанных к buy-заявке SL/TP/TS заявок
-                    if (buy_ord.StopLoss != null) buy_ord.StopLoss.ActualAmount += buy_ord.ActualAmount;
-                    if (buy_ord.TakeProfit != null) buy_ord.TakeProfit.ActualAmount += buy_ord.ActualAmount;
-                    if (buy_ord.TrailingStop != null) buy_ord.TrailingStop.ActualAmount += buy_ord.ActualAmount;
+                    if (buy_ord.StopLoss != null)
+                    {
+                        buy_ord.StopLoss.ActualAmount += buy_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, buy_ord.StopLoss.OrderId, buy_ord.StopLoss.UserId, buy_ord.StopLoss.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
+                    if (buy_ord.TakeProfit != null)
+                    {
+                        buy_ord.TakeProfit.ActualAmount += buy_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, buy_ord.TakeProfit.OrderId, buy_ord.TakeProfit.UserId, buy_ord.TakeProfit.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
+                    if (buy_ord.TrailingStop != null)
+                    {
+                        buy_ord.TrailingStop.ActualAmount += buy_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, buy_ord.TrailingStop.OrderId, buy_ord.TrailingStop.UserId, buy_ord.TrailingStop.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
 
                     //buy-заявка становится filled => её ActualAmount становится нулевым
                     buy_ord.ActualAmount = 0m;
@@ -1585,18 +1627,42 @@ namespace CoreCX.Trading
                     Pusher.NewBalance(buy_ord.UserId, derived_currency, buyer_derived_funds.AvailableFunds, buyer_derived_funds.BlockedFunds); //сообщение о новом балансе
 
                     //увеличивается ActualAmount привязанных к buy-заявке SL/TP/TS заявок
-                    if (buy_ord.StopLoss != null) buy_ord.StopLoss.ActualAmount += buy_ord.ActualAmount;
-                    if (buy_ord.TakeProfit != null) buy_ord.TakeProfit.ActualAmount += buy_ord.ActualAmount;
-                    if (buy_ord.TrailingStop != null) buy_ord.TrailingStop.ActualAmount += buy_ord.ActualAmount;
+                    if (buy_ord.StopLoss != null)
+                    {
+                        buy_ord.StopLoss.ActualAmount += buy_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, buy_ord.StopLoss.OrderId, buy_ord.StopLoss.UserId, buy_ord.StopLoss.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
+                    if (buy_ord.TakeProfit != null)
+                    {
+                        buy_ord.TakeProfit.ActualAmount += buy_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, buy_ord.TakeProfit.OrderId, buy_ord.TakeProfit.UserId, buy_ord.TakeProfit.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
+                    if (buy_ord.TrailingStop != null)
+                    {
+                        buy_ord.TrailingStop.ActualAmount += buy_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, buy_ord.TrailingStop.OrderId, buy_ord.TrailingStop.UserId, buy_ord.TrailingStop.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
 
                     //buy-заявка становится filled => её ActualAmount становится нулевым
                     buy_ord.ActualAmount = 0m;
                     Pusher.NewOrderMatch(derived_currency, buy_ord.OrderId, buy_ord.UserId, buy_ord.ActualAmount, OrderStatuses.Filled); //сообщение о новом статусе заявки
 
                     //увеличивается ActualAmount привязанных к sell-заявке SL/TP/TS заявок
-                    if (sell_ord.StopLoss != null) sell_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
-                    if (sell_ord.TakeProfit != null) sell_ord.TakeProfit.ActualAmount += sell_ord.ActualAmount;
-                    if (sell_ord.TrailingStop != null) sell_ord.TrailingStop.ActualAmount += sell_ord.ActualAmount;
+                    if (sell_ord.StopLoss != null)
+                    {
+                        sell_ord.StopLoss.ActualAmount += sell_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, sell_ord.StopLoss.OrderId, sell_ord.StopLoss.UserId, sell_ord.StopLoss.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
+                    if (sell_ord.TakeProfit != null)
+                    {
+                        sell_ord.TakeProfit.ActualAmount += sell_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, sell_ord.TakeProfit.OrderId, sell_ord.TakeProfit.UserId, sell_ord.TakeProfit.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
+                    if (sell_ord.TrailingStop != null)
+                    {
+                        sell_ord.TrailingStop.ActualAmount += sell_ord.ActualAmount;
+                        Pusher.NewOrderMatch(derived_currency, sell_ord.TrailingStop.OrderId, sell_ord.TrailingStop.UserId, sell_ord.TrailingStop.ActualAmount, OrderStatuses.Accepted); //сообщение о новом статусе заявки
+                    }
 
                     //sell-заявка становится filled => её ActualAmount становится нулевым
                     sell_ord.ActualAmount = 0m;
@@ -1992,6 +2058,7 @@ namespace CoreCX.Trading
                                 if (book.SellTPs.Remove(sell_sl.TakeProfit)) //удаляем слинкованный TP из памяти
                                 {
                                     CancelOrderDict.Remove(sell_sl.TakeProfit.OrderId);
+                                    Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, true, new Order(sell_sl.TakeProfit)); //сообщение о новой отмене заявке
                                     sell_sl.TakeProfit = null;
                                 }
                             }
@@ -2000,6 +2067,7 @@ namespace CoreCX.Trading
                                 if (book.SellTSs.Remove(sell_sl.TrailingStop)) //удаляем слинкованный TS из памяти
                                 {
                                     CancelOrderDict.Remove(sell_sl.TrailingStop.OrderId);
+                                    Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, true, new Order(sell_sl.TrailingStop)); //сообщение о новой отмене заявке
                                     sell_sl.TrailingStop = null;
                                 }
                             }
@@ -2064,6 +2132,7 @@ namespace CoreCX.Trading
                                 if (book.BuyTPs.Remove(buy_sl.TakeProfit)) //удаляем слинкованный TP из памяти
                                 {
                                     CancelOrderDict.Remove(buy_sl.TakeProfit.OrderId);
+                                    Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, false, new Order(buy_sl.TakeProfit)); //сообщение о новой отмене заявке
                                     buy_sl.TakeProfit = null;
                                 }
                             }
@@ -2072,6 +2141,7 @@ namespace CoreCX.Trading
                                 if (book.BuyTSs.Remove(buy_sl.TrailingStop)) //удаляем слинкованный TS из памяти
                                 {
                                     CancelOrderDict.Remove(buy_sl.TrailingStop.OrderId);
+                                    Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, false, new Order(buy_sl.TrailingStop)); //сообщение о новой отмене заявке
                                     buy_sl.TrailingStop = null;
                                 }
                             }
@@ -2138,6 +2208,7 @@ namespace CoreCX.Trading
                                 if (book.SellSLs.Remove(sell_tp.StopLoss)) //удаляем слинкованный SL из памяти
                                 {
                                     CancelOrderDict.Remove(sell_tp.StopLoss.OrderId);
+                                    Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, true, new Order(sell_tp.StopLoss)); //сообщение о новой отмене заявке
                                     sell_tp.StopLoss = null;
                                 }
                             }
@@ -2146,6 +2217,7 @@ namespace CoreCX.Trading
                                 if (book.SellTSs.Remove(sell_tp.TrailingStop)) //удаляем слинкованный TS из памяти
                                 {
                                     CancelOrderDict.Remove(sell_tp.TrailingStop.OrderId);
+                                    Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, true, new Order(sell_tp.TrailingStop)); //сообщение о новой отмене заявке
                                     sell_tp.TrailingStop = null;
                                 }
                             }
@@ -2209,7 +2281,8 @@ namespace CoreCX.Trading
                             {
                                 if (book.BuySLs.Remove(buy_tp.StopLoss)) //удаляем слинкованный SL из памяти
                                 {
-                                    CancelOrderDict.Remove(buy_tp.StopLoss.OrderId); 
+                                    CancelOrderDict.Remove(buy_tp.StopLoss.OrderId);
+                                    Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, false, new Order(buy_tp.StopLoss)); //сообщение о новой отмене заявке
                                     buy_tp.StopLoss = null;
                                 }
                             }
@@ -2218,6 +2291,7 @@ namespace CoreCX.Trading
                                 if (book.BuyTSs.Remove(buy_tp.TrailingStop)) //удаляем слинкованный TS из памяти
                                 {
                                     CancelOrderDict.Remove(buy_tp.TrailingStop.OrderId);
+                                    Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, false, new Order(buy_tp.TrailingStop)); //сообщение о новой отмене заявке
                                     buy_tp.TrailingStop = null;
                                 }
                             }
@@ -2293,6 +2367,7 @@ namespace CoreCX.Trading
                                     if (book.SellSLs.Remove(sell_ts.StopLoss)) //удаляем слинкованный SL из памяти
                                     {
                                         CancelOrderDict.Remove(sell_ts.StopLoss.OrderId);
+                                        Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, true, new Order(sell_ts.StopLoss)); //сообщение о новой отмене заявке
                                         sell_ts.StopLoss = null;
                                     }
                                 }
@@ -2301,6 +2376,7 @@ namespace CoreCX.Trading
                                     if (book.SellTPs.Remove(sell_ts.TakeProfit)) //удаляем слинкованный TP из памяти
                                     {
                                         CancelOrderDict.Remove(sell_ts.TakeProfit.OrderId);
+                                        Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, true, new Order(sell_ts.TakeProfit)); //сообщение о новой отмене заявке
                                         sell_ts.TakeProfit = null;
                                     }
                                 }
@@ -2372,7 +2448,8 @@ namespace CoreCX.Trading
                                 {
                                     if (book.BuySLs.Remove(buy_ts.StopLoss)) //удаляем слинкованный SL из памяти
                                     {
-                                        CancelOrderDict.Remove(buy_ts.StopLoss.OrderId); 
+                                        CancelOrderDict.Remove(buy_ts.StopLoss.OrderId);
+                                        Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, false, new Order(buy_ts.StopLoss)); //сообщение о новой отмене заявке
                                         buy_ts.StopLoss = null;
                                     }
                                 }
@@ -2380,7 +2457,8 @@ namespace CoreCX.Trading
                                 {
                                     if (book.BuyTPs.Remove(buy_ts.TakeProfit)) //удаляем слинкованный TP из памяти
                                     {
-                                        CancelOrderDict.Remove(buy_ts.TakeProfit.OrderId); 
+                                        CancelOrderDict.Remove(buy_ts.TakeProfit.OrderId);
+                                        Pusher.NewOrder(OrderEvents.Cancel, FCSources.Core, 0L, derived_currency, false, new Order(buy_ts.TakeProfit)); //сообщение о новой отмене заявке
                                         buy_ts.TakeProfit = null;
                                     }
                                 }
