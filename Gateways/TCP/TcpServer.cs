@@ -168,7 +168,7 @@ namespace CoreCX.Gateways.TCP
                     //  <<<< DELETE
                     Console.WriteLine(DateTime.Now + " MARKETMAKER: client connected [test mode]"); //  <<<< DELETE
                     Thread mm_thread = new Thread(new ParameterizedThreadStart(HandleMarketmakerThread)); //  <<<< DELETE   
-                    mm_thread.Start(); //  <<<< DELETE 
+                    mm_thread.Start(client); //  <<<< DELETE 
 
                     //  <<<< UNCOMMENT 
                     //if (remote_ip == MarketmakerIP) //MARKETMAKER
