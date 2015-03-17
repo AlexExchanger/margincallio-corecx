@@ -12,6 +12,15 @@ namespace CoreCX.Gateways.TCP
         {
             FuncCall call;
 
+            if (Flags.market_closed) //проверка на приостановку торгов
+            {
+                if (Enum.IsDefined(typeof(MarketClosedForbiddenFuncIds), func_id))
+                {
+                    CoreResponse.RejectMarketClosed(client);
+                    return;
+                }
+            }
+
             switch (func_id)
             {
 
@@ -361,7 +370,7 @@ namespace CoreCX.Gateways.TCP
                     }
 
 
-                case (int)FuncIds.CreateCurrencyPair:
+                case (int)FuncIds.CreateCurrencyPair: //создать новую валютную пару
                     {
                         if (!String.IsNullOrEmpty(str_args[0]))
                         {
@@ -381,7 +390,7 @@ namespace CoreCX.Gateways.TCP
                         }
                     }
 
-                case (int)FuncIds.GetCurrencyPairs:
+                case (int)FuncIds.GetCurrencyPairs: //получить список валютных пар
                     {
                         List<string> currency_pairs;
                         call = new FuncCall();
@@ -394,7 +403,7 @@ namespace CoreCX.Gateways.TCP
                         break;                    
                     }
 
-                case (int)FuncIds.GetDerivedCurrencies:
+                case (int)FuncIds.GetDerivedCurrencies: //получить список производных валют
                     {
                         List<string> derived_currencies;
                         call = new FuncCall();
@@ -409,7 +418,7 @@ namespace CoreCX.Gateways.TCP
 
                     //TODO DeleteCurrencyPair
 
-                case (int)FuncIds.GetTicker:
+                case (int)FuncIds.GetTicker: //получить тикер
                     {
                         decimal bid, ask;
                         if (!String.IsNullOrEmpty(str_args[0]))
@@ -430,7 +439,7 @@ namespace CoreCX.Gateways.TCP
                         }
                     }
 
-                case (int)FuncIds.GetDepth:
+                case (int)FuncIds.GetDepth: //получить глубину
                     {
                         int limit, bids_num, asks_num;                        
                         decimal bids_vol, asks_vol;
@@ -460,7 +469,31 @@ namespace CoreCX.Gateways.TCP
 
 
 
-                case (int)FuncIds.BackupCore:
+                case (int)FuncIds.CloseMarket: //приостановить торги
+                    {
+                        call = new FuncCall();
+                        call.Action = () =>
+                        {
+                            StatusCodes status = Flags.CloseMarket();
+                            CoreResponse.ReportExecRes(client, call.FuncCallId, (int)status);
+                        };
+                        Console.WriteLine(DateTime.Now + " To queue Flags.CloseMarket()");
+                        break;
+                    }
+
+                case (int)FuncIds.OpenMarket: //возобновить торги
+                    {
+                        call = new FuncCall();
+                        call.Action = () =>
+                        {
+                            StatusCodes status = Flags.OpenMarket();
+                            CoreResponse.ReportExecRes(client, call.FuncCallId, (int)status);
+                        };
+                        Console.WriteLine(DateTime.Now + " To queue Flags.OpenMarket()");
+                        break;
+                    }
+
+                case (int)FuncIds.BackupCore: //сделать снэпшот ядра
                     {
                         call = new FuncCall();
                         call.Action = () =>
@@ -472,7 +505,7 @@ namespace CoreCX.Gateways.TCP
                         break;
                     }
 
-                case (int)FuncIds.RestoreCore:
+                case (int)FuncIds.RestoreCore: //восстановить снэпшот ядра
                     {
                         call = new FuncCall();
                         call.Action = () =>
@@ -484,7 +517,7 @@ namespace CoreCX.Gateways.TCP
                         break;
                     }
 
-                case (int)FuncIds.ResetFuncCallId:
+                case (int)FuncIds.ResetFuncCallId: //сбросить func_call_id
                     {
                         call = new FuncCall();
                         call.Action = () =>
@@ -496,7 +529,7 @@ namespace CoreCX.Gateways.TCP
                         break;
                     }
 
-                default:
+                default: //функция не найдена
                     {
                         CoreResponse.RejectFuncNotFound(client);
                         return;

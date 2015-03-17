@@ -10,6 +10,15 @@ namespace CoreCX.Gateways.TCP
         {
             FuncCall call;
 
+            if (Flags.market_closed) //проверка на приостановку торгов
+            {
+                if (Enum.IsDefined(typeof(MarketClosedForbiddenFuncIds), func_id))
+                {
+                    CoreResponse.RejectMarketClosed(client);
+                    return;
+                }
+            }
+
             switch (func_id)
             {
 

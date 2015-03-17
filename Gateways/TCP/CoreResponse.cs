@@ -91,25 +91,31 @@ namespace CoreCX.Gateways.TCP
         internal static void AcceptFC(TcpClient client, long func_call_id) //запрос успешно обработан и будет поставлен в очередь
         {
             SocketIO.Write(client, JsonManager.FormTechJson((int)StatusCodes.Success, func_call_id));
-            Console.WriteLine(DateTime.Now + " WEB APP: accepted call #" + func_call_id);
+            Console.WriteLine(DateTime.Now + " CORE: accepted call #" + func_call_id);
         }
 
         internal static void RejectInvalidFuncArgs(TcpClient client)
         {
             SocketIO.Write(client, JsonManager.FormTechJson((int)StatusCodes.ErrorInvalidFunctionArguments));
-            Console.WriteLine(DateTime.Now + " WEB APP: [invalid arguments provided]");
+            Console.WriteLine(DateTime.Now + " CORE: [invalid arguments provided]");
         }
 
         internal static void RejectFuncNotFound(TcpClient client) //отклонение запроса из-за отсутствия функции в ядре
         {
             SocketIO.Write(client, JsonManager.FormTechJson((int)StatusCodes.ErrorFunctionNotFound));
-            Console.WriteLine(DateTime.Now + " WEB APP: [function not found]");
+            Console.WriteLine(DateTime.Now + " CORE: [function not found]");
         }
 
         internal static void RejectInvalidJson(TcpClient client) //отклонение запроса из-за невалидного JSON
         {
             SocketIO.Write(client, JsonManager.FormTechJson((int)StatusCodes.ErrorInvalidJsonInput));
-            Console.WriteLine(DateTime.Now + " WEB APP: [tech JSON parse failed]");
+            Console.WriteLine(DateTime.Now + " CORE: [tech JSON parse failed]");
+        }
+
+        internal static void RejectMarketClosed(TcpClient client) //отклонение запроса из-за приостановки торгов
+        {
+            SocketIO.Write(client, JsonManager.FormTechJson((int)StatusCodes.ErrorMarketClosed));
+            Console.WriteLine(DateTime.Now + " CORE: [market closed]");
         }
     }
 }

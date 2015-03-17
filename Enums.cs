@@ -28,6 +28,8 @@ namespace CoreCX
         GetTicker = 7000,
         GetDepth = 7100,
 
+        CloseMarket = 8800,
+        OpenMarket = 8900,
         BackupCore = 9000,
         RestoreCore = 9100,
         ResetFuncCallId = 9500,        
@@ -38,7 +40,9 @@ namespace CoreCX
 
     internal enum MarketClosedForbiddenFuncIds
     {
-
+        PlaceLimit = 700,
+        PlaceMarket = 800,
+        CancelOrder = 900
     }
 
     internal enum StatusCodes
@@ -76,7 +80,7 @@ namespace CoreCX
         ErrorFixRestartFailed = 30,
         ErrorFixAccountAlreadyExists = 31,
         ErrorFixAccountNotFound = 32,
-        ErrorFixSymbolNotFound = 33, //TODO
+        ErrorFixSymbolNotFound = 33,
         ErrorFixFieldsNotSet = 34,
         ErrorFixInvalidClOrdID = 35,
         ErrorFixUnknownOrderType = 36,
