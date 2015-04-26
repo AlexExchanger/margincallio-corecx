@@ -327,26 +327,26 @@ namespace CoreCX.Gateways.TCP
 
                     //  <<<< MOVE INSIDE THE COMMENTED SNIPPET BELOW (TO ADD IP RECTRICTION)
                     Console.WriteLine(DateTime.Now + " RESERVE: client connected [test mode]");
-                    while (true)
-                    {
-                        //попытка преобразовать сообщение в JSON и отправить его демону
-                        FuncCallReplica fc_replica;
-                        if (Queues.recovery_queue.TryPeek(out fc_replica))
-                        {
-                            bool _sent = SocketIO.Write(client, fc_replica.Serialize());
+                    //while (true)
+                    //{
+                    //    //попытка преобразовать сообщение в JSON и отправить его демону
+                    //    FuncCallReplica fc_replica;
+                    //    if (Queues.recovery_queue.TryPeek(out fc_replica))
+                    //    {
+                    //        bool _sent = SocketIO.Write(client, fc_replica.Serialize());
 
-                            if (_sent)
-                            {
-                                Console.WriteLine(DateTime.Now + " RESERVE: replica sent");
-                                Queues.recovery_queue.TryDequeue(out fc_replica);
-                            }
-                            else
-                            {
-                                Console.WriteLine(DateTime.Now + " RESERVE: failed to send a replica (dc)");
-                                break;
-                            }
-                        }
-                    }
+                    //        if (_sent)
+                    //        {
+                    //            Console.WriteLine(DateTime.Now + " RESERVE: replica sent");
+                    //            Queues.recovery_queue.TryDequeue(out fc_replica);
+                    //        }
+                    //        else
+                    //        {
+                    //            Console.WriteLine(DateTime.Now + " RESERVE: failed to send a replica (dc)");
+                    //            break;
+                    //        }
+                    //    }
+                    //}
 
                     client.Close();
                     Console.WriteLine(DateTime.Now + " RESERVE: connection closed");
